@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-06-16
-**Active Feature:** data-008 - 永恒之塔2默认全种族抓取与分页大小切换（已完成）
+**Active Feature:** data-009 - EdgeOne Pages Function 线上抓取迁移（已完成）
 
 ## What's Done
 
@@ -35,12 +35,15 @@
 - [x] 发布时间排序夹具验证：API 只调用 1 次，升序最早时间在前，降序最新时间在前。
 - [x] 默认种族抓取条件改为“全部”，初始重新抓取包含天族和魔族；螃蟹来源不点击种族筛选，7881 来源不传 groupId。
 - [x] 结果分页支持每页 10、50、100 条切换；页数切换只重算本地分页并回到第 1 页，不触发重新抓取。
+- [x] 新增 EdgeOne Pages Function：`aion2-market-dashboard/cloud-functions/api/listings.js`，线上映射 `/api/listings`。
+- [x] 螃蟹来源从 Playwright/DOM 抓取改为直接调用 `https://api-pc.pxb7.com/api/search/product/v2/selectSearchPageList`，同一轮抓取保持稳定 `device_id`，单来源最多 100 条。
+- [x] 7881 继续使用公开搜索页同源接口和签名逻辑；螃蟹与 7881 共用 `scrapeListings`，本地预览和 EdgeOne Function 走同一套纯 HTTP 聚合逻辑。
 
 ## What's Next
 
 ## Blockers / Risks
 
-- 螃蟹对直接 HTTP 请求返回反自动化挑战；当前网站使用本机无登录 headless 浏览器和页面原生滚动，不绕过验证、不使用用户 Cookie。7881 使用公开搜索页同源接口和页面签名逻辑。
+- 螃蟹页面 HTML 仍会返回反自动化挑战；当前线上抓取改用其公开 JSON 列表接口，不读取 Cookie、不绕过验证码。详情页“卖家说”暂以列表标题作为展开内容，后续若发现稳定详情 API 再补全。
 
 ## Decisions Made
 
@@ -58,4 +61,5 @@
 - 查询网站真实聚合：`GET /api/listings?minPrice=500&race=天族&profession=弓星` 返回 200 条，螃蟹/7881 各 100 条
 - 查询网站浏览器验证：本地查询按钮、表头排序（含发布时间）、默认 3 条展开行均通过
 - 查询网站分页验证：默认种族为全部；每页 10/50/100 切换只更新本地分页，未新增 `/api/listings` 调用
+- EdgeOne Function 验证：直接调用 `cloud-functions/api/listings.js` 返回 200 条，螃蟹/7881 各 100 条；本地 preview 的 `/api/listings` 返回 `Count=200`、`SourceCount=2`、`Warnings=0`
 - 设计 QA：`aion2-market-dashboard/design-qa.md`

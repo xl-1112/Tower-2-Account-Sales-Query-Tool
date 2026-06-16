@@ -27,6 +27,8 @@
 - 已将价格、装等、战斗力、会员天数、发布时间排序移入表头；排序和分页不触发重新抓取。
 - 已移除子集列，改为每行可展开卖家说详情；默认展开排序后前 3 行。
 - 已将默认种族筛选改为“全部”，初始抓取覆盖天族和魔族；分页支持每页 10、50、100 条本地切换。
+- 已新增 EdgeOne Pages Function：`aion2-market-dashboard/cloud-functions/api/listings.js`，线上 `/api/listings` 复用本地 `scrapeListings`。
+- 已将螃蟹来源改为直接调用 `api-pc.pxb7.com/api/search/product/v2/selectSearchPageList` JSON 接口，线上不再依赖 Playwright 或本机 Chrome；7881 继续使用公开搜索接口签名逻辑。
 
 ## Verification
 
@@ -42,6 +44,7 @@
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
 | 查询网站交互验证 | in-app browser at `http://127.0.0.1:4173/` | 查询/重新抓取双按钮存在；无子集表头；默认 3 条卖家说展开；点击装等排序不重新抓取；发布时间排序夹具验证通过 |
 | 查询网站分页验证 | in-app browser at `http://127.0.0.1:4173/` | 默认种族为全部；每页 10/50/100 切换可用，切换后回到第 1 页且不新增 `/api/listings` 调用 |
+| EdgeOne Function 迁移验证 | `cloud-functions/api/listings.js` + local preview `/api/listings` | 直接调用函数返回 200 条，螃蟹/7881 各 100 条；本地 preview 返回 `Count=200`、`SourceCount=2`、`Warnings=0` |
 
 ## Existing User Changes
 
@@ -68,7 +71,7 @@
 ## Blockers / Risks
 
 - 高风险设备控制必须先确认审批和审计方案。
-- 螃蟹的直接 HTTP 请求会返回反自动化挑战；当前实现只启动无登录 headless 浏览器读取公开页面，不绕过验证、不使用用户 Cookie。
+- 螃蟹页面 HTML 仍会返回反自动化挑战；当前线上实现改用其公开 JSON 列表接口，不读取 Cookie、不绕过验证码。详情页“卖家说”暂以列表标题作为展开内容，后续若发现稳定详情 API 再补全。
 - 7881 使用公开搜索页同源接口；接口需要 `lb-timestamp` 和 `lb-sign`，签名逻辑来自页面脚本 `lb-cry.js`。
 - 当前重新抓取每个来源最多加载前 100 条，默认种族为“全部”以包含天族和魔族；不定时抓取、不保存历史；密集请求可能触发站点临时限流，禁止绕过。查询按钮、排序、翻页和每页条数切换只筛选或重排本地已抓取数据。
 

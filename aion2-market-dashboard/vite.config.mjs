@@ -12,21 +12,13 @@ function listingsApi() {
       const url = new URL(req.url, 'http://localhost')
       const minPrice = Number(url.searchParams.get('minPrice') || 0)
       const maxPriceRaw = url.searchParams.get('maxPrice')
-      const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : Number.POSITIVE_INFINITY
       const profession = url.searchParams.get('profession') || '全部'
       const race = url.searchParams.get('race') || '全部'
       const minMemberDays = Number(url.searchParams.get('minMemberDays') || 0)
       const result = await scrapeListings({ minPrice, maxPrice: maxPriceRaw, profession, race, minMemberDays })
-      const items = result.items.filter((item) => {
-        const priceMatches = item.priceYuan >= minPrice && item.priceYuan <= maxPrice
-        const professionMatches = profession === '全部' || item.profession === profession
-        const raceMatches = race === '全部' || item.race === race
-        const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
-        return priceMatches && professionMatches && raceMatches && memberMatches
-      })
 
       res.statusCode = 200
-      res.end(JSON.stringify({ ...result, items, totalFetched: result.items.length }))
+      res.end(JSON.stringify(result))
     } catch (error) {
       res.statusCode = 502
       const rawMessage = error.message || ''

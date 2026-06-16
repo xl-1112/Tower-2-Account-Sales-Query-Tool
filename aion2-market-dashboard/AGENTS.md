@@ -17,5 +17,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Page-size options are 10, 50, and 100 rows per page; switching page size returns to page 1.
 - Always show scrape status and timestamp so stale data is not presented as live.
 - Use the source game's real icon and Phosphor icons; do not replace visible assets with text glyphs or handmade shapes.
-- Source values are `螃蟹` and `7881`; both are implemented. `螃蟹` uses the public page through a no-login browser session, and `7881` uses the public search page's same-origin list API with its page signing logic.
+- Source values are `螃蟹` and `7881`; both are implemented. `螃蟹` uses the public JSON list API, and `7881` uses the public search page's same-origin list API with its page signing logic.
 - Detail page seller speech is shown in expandable table rows, with the first 3 sorted rows expanded by default. If one detail page fails, keep the account row with list-page fields and leave seller-derived fields empty.
+- Production API is served by EdgeOne Pages Function at `cloud-functions/api/listings.js`, mapped to `/api/listings`.
+- `螃蟹` production scraping uses the public JSON list API `api-pc.pxb7.com/api/search/product/v2/selectSearchPageList`; keep one stable `device_id`/`gio_device` per scrape so pagination remains stable. Do not reintroduce Playwright for EdgeOne deployment.

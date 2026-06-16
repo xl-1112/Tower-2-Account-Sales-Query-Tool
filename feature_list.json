@@ -63,6 +63,14 @@
       "dependencies": ["data-007"],
       "status": "completed",
       "evidence": "前端默认 race=全部，后端 scrapeListings 与 Vite API 默认 race=全部；7881 在全部时不传 groupId，螃蟹在全部时不点击种族筛选。分页新增每页 10/50/100 下拉，切换后回到第 1 页并仅重算本地分页。验证通过：node scripts/validate-wechat-ai-skill.mjs、node scripts/validate-aion2-data-probe.mjs、npm test、npm run build；浏览器夹具 65 条数据验证 apiCalls=1、初始请求 race=全部、分页从 10 切到 50/100 不新增 API 调用。"
+    },
+    {
+      "id": "data-009",
+      "name": "EdgeOne Pages Function 线上抓取迁移",
+      "description": "将 /api/listings 迁移为 EdgeOne Pages Function；螃蟹来源改为直接调用 selectSearchPageList JSON API，7881 继续使用公开搜索接口签名逻辑，线上不再依赖 Playwright 或本机 Chrome。",
+      "dependencies": ["data-008"],
+      "status": "completed",
+      "evidence": "新增 aion2-market-dashboard/cloud-functions/api/listings.js；server/scrape.mjs 已改为纯 HTTP 抓取，单来源仍限制 100 条。验证通过：npm test、npm run build、node scripts/validate-aion2-data-probe.mjs；本地直接调用 Cloud Function 返回 200 条，螃蟹/7881 各 100 条；本地 preview 的 /api/listings 返回 Count=200、SourceCount=2、Warnings=0。"
     }
   ]
 }
