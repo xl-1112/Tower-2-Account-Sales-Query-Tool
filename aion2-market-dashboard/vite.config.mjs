@@ -1,6 +1,6 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { scrapeListings } from "./server/scrape.mjs";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { scrapeListings } from './server/scrape.mjs'
 
 function listingsApi() {
   return async (req, res, next) => {
@@ -10,22 +10,20 @@ function listingsApi() {
 
     try {
       const url = new URL(req.url, 'http://localhost')
-      const minPrice = Number(url.searchParams.get('minPrice') || 0)
-      const maxPriceRaw = url.searchParams.get('maxPrice')
-      const profession = url.searchParams.get('profession') || '全部'
-      const race = url.searchParams.get('race') || '全部'
-      const minMemberDays = Number(url.searchParams.get('minMemberDays') || 0)
-      const result = await scrapeListings({ minPrice, maxPrice: maxPriceRaw, profession, race, minMemberDays })
+      const result = await scrapeListings({
+        minPrice: Number(url.searchParams.get('minPrice') || 0),
+        maxPrice: url.searchParams.get('maxPrice') || '',
+        profession: url.searchParams.get('profession') || '全部',
+        race: url.searchParams.get('race') || '全部',
+        linkedAccount: url.searchParams.get('linkedAccount') || '全部',
+        minMemberDays: Number(url.searchParams.get('minMemberDays') || 0),
+      })
 
       res.statusCode = 200
       res.end(JSON.stringify(result))
     } catch (error) {
       res.statusCode = 502
-      const rawMessage = error.message || ''
-      const message = rawMessage.includes('目标列表页连续 3 次未返回商品')
-        ? '目标站点暂时没有返回商品列表，请稍后重试'
-        : rawMessage || '重新抓取失败，请稍后重试'
-      res.end(JSON.stringify({ message }))
+      res.end(JSON.stringify({ message: error.message || '重新抓取失败，请稍后重试' }))
     }
   }
 }
@@ -44,12 +42,12 @@ function liveListingsPlugin() {
 
 export default defineConfig({
   optimizeDeps: {
-    include: ["react", "react-dom/client"],
+    include: ['react', 'react-dom/client'],
   },
   server: {
     warmup: {
-      clientFiles: ["./src/main.jsx"],
+      clientFiles: ['./src/main.jsx'],
     },
   },
   plugins: [react(), liveListingsPlugin()],
-});
+})

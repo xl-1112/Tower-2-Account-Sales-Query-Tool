@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-06-16
-**Active Feature:** data-009 - EdgeOne Pages Function 线上抓取迁移（已完成）
+**Active Feature:** data-010 - 永恒之塔2连体号筛选与卖家说推断（已完成）
 
 ## What's Done
 
@@ -38,6 +38,9 @@
 - [x] 新增 EdgeOne Pages Function：`aion2-market-dashboard/cloud-functions/api/listings.js`，线上映射 `/api/listings`。
 - [x] 螃蟹来源从 Playwright/DOM 抓取改为直接调用 `https://api-pc.pxb7.com/api/search/product/v2/selectSearchPageList`，同一轮抓取保持稳定 `device_id`，单来源最多 100 条。
 - [x] 7881 继续使用公开搜索页同源接口和签名逻辑；螃蟹与 7881 共用 `scrapeListings`，本地预览和 EdgeOne Function 走同一套纯 HTTP 聚合逻辑。
+- [x] 查询条件新增“连体号”：全部、4连号、5连号、6连号、7连号、8连号。
+- [x] 商品数据新增 `linkedAccountCount` / `linkedAccountLabel`，并在表格展示连体号列。
+- [x] 连体号解析优先读取显式“4连号/5连号/连体号-5连号”；无显式字段时，从“主号 + 小号...”推断，例如“小号158杀+181护+154弓”识别为 4 连号。
 
 ## What's Next
 
@@ -62,4 +65,5 @@
 - 查询网站浏览器验证：本地查询按钮、表头排序（含发布时间）、默认 3 条展开行均通过
 - 查询网站分页验证：默认种族为全部；每页 10/50/100 切换只更新本地分页，未新增 `/api/listings` 调用
 - EdgeOne Function 验证：直接调用 `cloud-functions/api/listings.js` 返回 200 条，螃蟹/7881 各 100 条；本地 preview 的 `/api/listings` 返回 `Count=200`、`SourceCount=2`、`Warnings=0`
+- 连体号验证：`npm test` 10 项通过；Cloud Function 入口带 `linkedAccount=4连号` 实测返回 47 条，所有结果 `linkedAccountLabel` 均为 `4连号`
 - 设计 QA：`aion2-market-dashboard/design-qa.md`

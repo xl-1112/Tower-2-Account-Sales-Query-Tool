@@ -71,6 +71,14 @@
       "dependencies": ["data-008"],
       "status": "completed",
       "evidence": "新增 aion2-market-dashboard/cloud-functions/api/listings.js；server/scrape.mjs 已改为纯 HTTP 抓取，单来源仍限制 100 条。验证通过：npm test、npm run build、node scripts/validate-aion2-data-probe.mjs；本地直接调用 Cloud Function 返回 200 条，螃蟹/7881 各 100 条；本地 preview 的 /api/listings 返回 Count=200、SourceCount=2、Warnings=0。"
+    },
+    {
+      "id": "data-010",
+      "name": "永恒之塔2连体号筛选与卖家说推断",
+      "description": "查询条件新增连体号，支持全部、4连号、5连号、6连号、7连号、8连号；商品数据新增 linkedAccountCount/linkedAccountLabel，并从标题、连体号字段和卖家说/小号描述中识别，例如一个大号加小号158杀+181护+154弓推断为4连号。",
+      "dependencies": ["data-009"],
+      "status": "completed",
+      "evidence": "前端新增连体号筛选和表格列；/api/listings 支持 linkedAccount 参数；解析层新增 parseLinkedAccountCount，优先读取显式连号，缺省时按小号数量+主号推断。验证通过：npm test 10项、npm run build、node scripts/validate-aion2-data-probe.mjs；Cloud Function 入口 linkedAccount=4连号 实测返回47条且 labels=[4连号]。"
     }
   ]
 }

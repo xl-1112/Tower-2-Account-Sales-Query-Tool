@@ -7,6 +7,7 @@ import {
   normalize7881Listing,
   normalizePxb7ApiListing,
   parseChildCharacters,
+  parseLinkedAccountCount,
   parseListings,
   parseSellerRemark,
 } from './scrape.mjs'
@@ -34,6 +35,8 @@ test('parseListings extracts the requested marketplace fields from rendered HTML
       combatPower: '573.32K',
       membershipDays: null,
       children: [],
+      linkedAccountCount: null,
+      linkedAccountLabel: null,
       sellerRemark: '【艾瑞爾】45级天族男弓星 装等4514 战斗力573.32K',
       publishedAtLabel: '9分钟前',
       detailUrl: 'https://www.pxb7.com/product/123456/1',
@@ -89,6 +92,22 @@ test('parseChildCharacters extracts child role hints from seller speech', () => 
   ])
 })
 
+test('parseLinkedAccountCount reads explicit linked-account labels', () => {
+  assert.equal(parseLinkedAccountCount('同职五连号，会员还有13天'), 5)
+  assert.equal(parseLinkedAccountCount('连体号-6连号'), 6)
+})
+
+test('parseLinkedAccountCount infers linked accounts from seller speech with role shorthand', () => {
+  const text = '557K双夔剑星，胸针没做的战力，能量满的，包里也很多没吃，小号158杀+181护+154弓，557K，158杀，181护，154弓'
+
+  assert.equal(parseLinkedAccountCount(text), 4)
+  assert.deepEqual(parseChildCharacters(text), [
+    { type: '小号', label: '小号1', combatPower: '158杀' },
+    { type: '小号', label: '小号2', combatPower: '181护' },
+    { type: '小号', label: '小号3', combatPower: '154弓' },
+  ])
+})
+
 test('enrichListingWithSellerRemark adds seller-derived account details', () => {
   const item = parseListings(`
     <a href="/product/123456/1">
@@ -101,6 +120,8 @@ test('enrichListingWithSellerRemark adds seller-derived account details', () => 
   const enriched = enrichListingWithSellerRemark(item, '会员还有13天，4连号，小号290k')
 
   assert.equal(enriched.membershipDays, 13)
+  assert.equal(enriched.linkedAccountCount, 4)
+  assert.equal(enriched.linkedAccountLabel, '4连号')
   assert.deepEqual(enriched.children, [
     { type: '连号', label: '4连号', count: 4 },
     { type: '小号', label: '小号1', combatPower: '290K' },
@@ -127,6 +148,8 @@ test('normalize7881Listing maps 7881 goods fields into the shared table model', 
   assert.equal(item.profession, '守护星')
   assert.equal(item.equipmentLevel, '4413')
   assert.equal(item.combatPower, '558.3K')
+  assert.equal(item.linkedAccountCount, 5)
+  assert.equal(item.linkedAccountLabel, '5连号')
   assert.equal(item.publishedAtLabel, '2026-06-16 10:00:52')
   assert.equal(item.detailUrl, 'https://search.7881.com/201612610455502.html')
   assert.deepEqual(item.children, [
@@ -138,11 +161,11 @@ test('normalize7881Listing maps 7881 goods fields into the shared table model', 
   ])
 })
 
-test('filterListings applies local price, race, profession, and membership filters', () => {
+test('filterListings applies local price, race, profession, membership, and linked-account filters', () => {
   const rows = [
-    { priceYuan: 600, race: '天族', profession: '弓星', membershipDays: 10 },
-    { priceYuan: 400, race: '魔族', profession: '弓星', membershipDays: 30 },
-    { priceYuan: 900, race: '魔族', profession: '魔道星', membershipDays: 60 },
+    { priceYuan: 600, race: '天族', profession: '弓星', membershipDays: 10, linkedAccountLabel: '4连号' },
+    { priceYuan: 400, race: '魔族', profession: '弓星', membershipDays: 30, linkedAccountLabel: '5连号' },
+    { priceYuan: 900, race: '魔族', profession: '魔道星', membershipDays: 60, linkedAccountLabel: '5连号' },
   ]
 
   assert.deepEqual(filterListings(rows, {
@@ -150,5 +173,6 @@ test('filterListings applies local price, race, profession, and membership filte
     race: '魔族',
     profession: '魔道星',
     minMemberDays: 30,
+    linkedAccount: '5连号',
   }), [rows[2]])
 })

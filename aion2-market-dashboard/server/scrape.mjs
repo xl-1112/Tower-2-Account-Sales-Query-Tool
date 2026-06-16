@@ -12,6 +12,7 @@ const PXB7_MAX_PAGES = Math.ceil(MAX_ITEMS_PER_SOURCE / PXB7_SOURCE_PAGE_SIZE)
 const PXB7_SOURCE_NAME = '螃蟹'
 const SOURCE_7881_NAME = '7881'
 const SOURCE_7881_SIGN_SEED = '5c2c538a3937c6db2d04bce3d03bbe88bl'.split('').reverse().join('')
+const ALL_OPTION = '全部'
 
 let scrapeQueue = Promise.resolve()
 
@@ -36,7 +37,41 @@ function attribute(chunk, name) {
   return decodeHtml(chunk.match(new RegExp(`${name}="([^"]*)"`))?.[1] || '')
 }
 
-function parseMembershipDays(text = '') {
+function chineseCount(value) {
+  const map = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
+  return Number(value) || map[value] || null
+}
+
+function linkedAccountLabel(count) {
+  return count ? `${count}连号` : null
+}
+
+function uniqueSmallChildren(children) {
+  return children.map((child, index, list) => {
+    if (child.type !== '小号') return child
+    const smallIndex = list.slice(0, index + 1).filter((item) => item.type === '小号').length
+    return { ...child, label: `小号${smallIndex}` }
+  })
+}
+
+function appendSmallChild(children, value) {
+  const normalized = String(value || '').replace(/\s+/g, '')
+  if (!/\d/.test(normalized)) return
+  children.push({
+    type: '小号',
+    label: `小号${children.filter((child) => child.type === '小号').length + 1}`,
+    combatPower: normalized.toUpperCase().endsWith('K') ? normalized.toUpperCase() : normalized,
+  })
+}
+
+function parseSmallAccountSegment(segment = '') {
+  return String(segment)
+    .split(/[+＋，、和,]/)
+    .map((value) => value.trim())
+    .filter((value) => /\d/.test(value))
+}
+
+export function parseMembershipDays(text = '') {
   const normalized = String(text).replace(/\s+/g, '')
   const match = normalized.match(/会员(?:还剩|还有|剩余)?(\d+)天/)
     || normalized.match(/(\d+)天.*(?:会员|通行证)/)
@@ -61,46 +96,54 @@ export function parseChildCharacters(text = '') {
   const spaced = String(text).replace(/\s+/g, ' ')
   const children = []
   const consecutiveMatch = spaced.match(/(?:同职)?([一二三四五六七八九十\d]+)连号/)
-  const digitMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
 
   if (consecutiveMatch) {
     const rawCount = consecutiveMatch[1]
-    const count = Number(rawCount) || digitMap[rawCount] || null
-    children.push({ type: '连号', label: `${rawCount}连号`, count })
+    children.push({ type: '连号', label: `${rawCount}连号`, count: chineseCount(rawCount) })
   }
 
-  const altMatch = normalized.match(/小号([0-9Kk,.，、和]+)(?:找回|$)/)
-  if (altMatch) {
-    altMatch[1].split(/[，、和,]/).filter(Boolean).forEach((value, index) => {
-      const combatPower = value.toUpperCase().endsWith('K') ? value.toUpperCase() : `${value}K`
-      children.push({ type: '小号', label: `小号${index + 1}`, combatPower })
+  const numericAltMatch = normalized.match(/小号([0-9Kk,.，、和]+)(?:找回|$)/)
+  if (numericAltMatch) {
+    parseSmallAccountSegment(numericAltMatch[1]).forEach((value) => {
+      appendSmallChild(children, value.toUpperCase().endsWith('K') ? value : `${value}K`)
     })
   }
 
+  const roleAltMatch = normalized.match(/小号((?:\d+[^\d，。；;+＋和]*)[+＋](?:\d+[^\d，。；;+＋和]*)(?:[+＋]\d+[^\d，。；;+＋和]*)*)/)
+  if (roleAltMatch && /[+＋]/.test(roleAltMatch[1])) {
+    parseSmallAccountSegment(roleAltMatch[1]).forEach((value) => appendSmallChild(children, value))
+  }
+
   for (const match of normalized.matchAll(/([\d.]+)\s*[Kk]小号/g)) {
-    const combatPower = `${match[1]}K`
-    if (!children.some((child) => child.type === '小号' && child.combatPower === combatPower)) {
-      children.push({ type: '小号', label: `小号${children.filter((child) => child.type === '小号').length + 1}`, combatPower })
-    }
+    appendSmallChild(children, `${match[1]}K`)
   }
 
   for (const match of normalized.matchAll(/(\d+)个([\d.]+)\s*[Kk]/g)) {
     const count = Number(match[1])
-    const combatPower = `${match[2]}K`
-    for (let index = 0; index < count; index += 1) {
-      children.push({ type: '小号', label: `小号${children.filter((child) => child.type === '小号').length + 1}`, combatPower })
-    }
+    for (let index = 0; index < count; index += 1) appendSmallChild(children, `${match[2]}K`)
   }
 
-  return children
+  return uniqueSmallChildren(children)
+}
+
+export function parseLinkedAccountCount(text = '') {
+  const spaced = String(text).replace(/\s+/g, ' ')
+  const explicitMatch = spaced.match(/(?:连体号[-:：]?)?\s*(?:同职)?([一二三四五六七八九十\d]+)连号/)
+  if (explicitMatch) return chineseCount(explicitMatch[1])
+
+  const childCount = parseChildCharacters(text).filter((child) => child.type === '小号').length
+  return childCount > 0 ? childCount + 1 : null
 }
 
 export function enrichListingWithSellerRemark(item, sellerRemark = '') {
   const detailText = `${item.title || ''} ${sellerRemark}`
+  const linkedAccountCount = parseLinkedAccountCount(detailText)
   return {
     ...item,
     membershipDays: parseMembershipDays(detailText),
     children: parseChildCharacters(detailText),
+    linkedAccountCount,
+    linkedAccountLabel: linkedAccountLabel(linkedAccountCount),
     sellerRemark: sellerRemark || null,
   }
 }
@@ -111,11 +154,13 @@ export function normalizeListing(raw) {
     ? raw.metadata.map((value) => String(value).trim())
     : decodeHtml(raw.metadata || '').split(',').map((value) => value.trim())
   const cents = Number(raw.price)
+  const sellerRemark = raw.sellerRemark || ''
+  const detailText = `${title} ${sellerRemark}`
   const equipmentLevel = title.match(/装等\s*([\d.]+)/)?.[1] || null
   const combatPower = title.match(/战斗力\s*([\d.]+\s*[KkMm]?)/)?.[1]?.replace(/\s+/g, '') || null
-  const sellerRemark = raw.sellerRemark || ''
-  const membershipDays = parseMembershipDays(`${title} ${sellerRemark}`)
-  const children = parseChildCharacters(`${title} ${sellerRemark}`)
+  const membershipDays = parseMembershipDays(detailText)
+  const children = parseChildCharacters(detailText)
+  const linkedAccountCount = parseLinkedAccountCount(detailText)
 
   if (!raw.productId || !title || !metadata[0] || !metadata[1] || !Number.isFinite(cents)) return null
 
@@ -131,6 +176,8 @@ export function normalizeListing(raw) {
     combatPower,
     membershipDays,
     children,
+    linkedAccountCount,
+    linkedAccountLabel: linkedAccountLabel(linkedAccountCount),
     sellerRemark: sellerRemark || title || null,
     publishedAtLabel: decodeHtml(raw.publishedAtLabel || '') || null,
     detailUrl: `https://www.pxb7.com/product/${raw.productId}/1`,
@@ -167,8 +214,9 @@ export function normalize7881Listing(raw) {
     || title.match(/战力评分K[:：]?\s*([\d.]+)/)?.[1]
     || null
   const race = raw.groupName?.includes('天族') ? '天族' : raw.groupName?.includes('魔族') ? '魔族' : raw.groupName || null
-  const sellerRemark = title || null
   const detailText = `${title} ${subTitle}`
+  const children = parseChildCharacters(detailText)
+  const linkedAccountCount = parseLinkedAccountCount(detailText)
   const goodsId = String(raw.goodsId || '')
   const priceYuan = Number(raw.price)
 
@@ -185,8 +233,10 @@ export function normalize7881Listing(raw) {
     equipmentLevel,
     combatPower: combatPowerRaw ? `${String(combatPowerRaw).replace(/\s+/g, '')}K` : null,
     membershipDays: parseMembershipDays(detailText),
-    children: parseChildCharacters(detailText),
-    sellerRemark,
+    children,
+    linkedAccountCount,
+    linkedAccountLabel: linkedAccountLabel(linkedAccountCount),
+    sellerRemark: title || null,
     publishedAtLabel: raw.lastTime || raw.createtime || null,
     detailUrl: `https://search.7881.com/${goodsId}.html`,
   }
@@ -223,8 +273,9 @@ export function normalizeFilters(filters = {}) {
     maxPrice: filters.maxPrice === undefined || filters.maxPrice === null || filters.maxPrice === ''
       ? Number.POSITIVE_INFINITY
       : Number(filters.maxPrice),
-    profession: filters.profession || '全部',
-    race: filters.race || '全部',
+    profession: filters.profession || ALL_OPTION,
+    race: filters.race || ALL_OPTION,
+    linkedAccount: filters.linkedAccount || ALL_OPTION,
     minMemberDays: Number(filters.minMemberDays) || 0,
   }
 }
@@ -233,10 +284,11 @@ export function filterListings(items, filters = {}) {
   const normalizedFilters = normalizeFilters(filters)
   return items.filter((item) => {
     const priceMatches = item.priceYuan >= normalizedFilters.minPrice && item.priceYuan <= normalizedFilters.maxPrice
-    const professionMatches = normalizedFilters.profession === '全部' || item.profession === normalizedFilters.profession
-    const raceMatches = normalizedFilters.race === '全部' || item.race === normalizedFilters.race
+    const professionMatches = normalizedFilters.profession === ALL_OPTION || item.profession === normalizedFilters.profession
+    const raceMatches = normalizedFilters.race === ALL_OPTION || item.race === normalizedFilters.race
+    const linkedMatches = normalizedFilters.linkedAccount === ALL_OPTION || item.linkedAccountLabel === normalizedFilters.linkedAccount
     const memberMatches = normalizedFilters.minMemberDays <= 0 || (item.membershipDays || 0) >= normalizedFilters.minMemberDays
-    return priceMatches && professionMatches && raceMatches && memberMatches
+    return priceMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
 }
 
@@ -340,7 +392,7 @@ async function fetch7881Page(filters, pageNum) {
   if (filters.race === '魔族') body.groupId = 'G6212P002'
   if (filters.minPrice > 0) body.minPrice = filters.minPrice
   if (Number.isFinite(filters.maxPrice)) body.maxPrice = filters.maxPrice
-  if (filters.profession !== '全部') {
+  if (filters.profession !== ALL_OPTION) {
     body.extendAttrList.push({
       eid: '398298',
       evs: [filters.profession],

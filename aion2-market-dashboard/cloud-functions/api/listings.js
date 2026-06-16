@@ -19,6 +19,7 @@ function readFilters(request) {
     maxPrice: url.searchParams.get('maxPrice') || '',
     profession: url.searchParams.get('profession') || '全部',
     race: url.searchParams.get('race') || '全部',
+    linkedAccount: url.searchParams.get('linkedAccount') || '全部',
     minMemberDays: Number(url.searchParams.get('minMemberDays') || 0),
   }
 }

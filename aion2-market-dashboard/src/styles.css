@@ -63,7 +63,7 @@ h1 { margin: 0; font-size: 20px; line-height: 1.25; }
 .filter-heading svg { color: var(--orange); }
 .reset-button { border: 0; background: transparent; color: #656971; font-size: 13px; padding: 6px; }
 .reset-button:hover { color: var(--orange); }
-.filter-grid { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)) auto; gap: 16px; align-items: end; }
+.filter-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)) auto; gap: 16px; align-items: end; }
 .field-group { display: flex; flex-direction: column; gap: 8px; color: #555a62; font-size: 12px; }
 .input-wrap { height: 42px; display: flex; align-items: center; border: 1px solid #dedfe3; border-radius: 6px; background: #fff; transition: border-color .18s, box-shadow .18s; }
 .input-wrap:focus-within, select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(240, 138, 32, .1); outline: 0; }
@@ -119,6 +119,7 @@ tbody tr:hover { background: #fffaf5; }
 .server-name { color: #292c31; font-weight: 600; }
 .source-tag { display: inline-block; padding: 4px 8px; border-radius: 999px; color: #5c6470; background: #f2f3f5; font-size: 12px; }
 .race-tag { display: inline-block; padding: 4px 9px; border-radius: 4px; color: #c26a16; background: #fff3e5; font-size: 12px; }
+.linked-tag { display: inline-block; padding: 4px 9px; border-radius: 4px; color: #496176; background: #eef5fb; font-size: 12px; }
 .price-cell { color: #e15f4b; font-size: 15px; }
 .power-value { font-variant-numeric: tabular-nums; font-weight: 600; color: #444951; }
 .member-value { font-variant-numeric: tabular-nums; color: #59606b; }

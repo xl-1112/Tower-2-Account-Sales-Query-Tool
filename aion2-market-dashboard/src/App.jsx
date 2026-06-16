@@ -12,8 +12,9 @@ import {
 
 const professions = ['全部', '剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
 const races = ['全部', '天族', '魔族']
-const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
+const linkedAccountOptions = ['全部', '4连号', '5连号', '6连号', '7连号', '8连号']
 const pageSizeOptions = [10, 50, 100]
+const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
 
 const defaultSort = { key: 'price', direction: 'asc' }
 const sortLabels = {
@@ -63,7 +64,7 @@ function publishedTimeValue(value) {
     return Number.isFinite(timestamp) ? timestamp : null
   }
 
-  const relativeMatch = text.match(/(\d+(?:\.\d+)?)(?:\s*)(秒|分钟|小时|天|周|月)前?/)
+  const relativeMatch = text.match(/(\d+(?:\.\d+)?)(?:\s*)(秒|分钟|小时|天|周|月).*前/)
   if (relativeMatch) {
     const amount = Number(relativeMatch[1])
     const unitMs = {
@@ -110,8 +111,9 @@ function filterRows(rows, activeFilters) {
     const priceMatches = item.priceYuan >= minPrice && item.priceYuan <= maxPrice
     const professionMatches = activeFilters.profession === '全部' || item.profession === activeFilters.profession
     const raceMatches = activeFilters.race === '全部' || item.race === activeFilters.race
+    const linkedMatches = activeFilters.linkedAccount === '全部' || item.linkedAccountLabel === activeFilters.linkedAccount
     const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
-    return priceMatches && professionMatches && raceMatches && memberMatches
+    return priceMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
 }
 
@@ -148,6 +150,7 @@ export function App() {
     maxPrice: '',
     profession: '全部',
     race: '全部',
+    linkedAccount: '全部',
     minMemberDays: '',
   }), [])
   const [filters, setFilters] = useState(defaultFilters)
@@ -156,7 +159,6 @@ export function App() {
   const [items, setItems] = useState([])
   const [expandedRows, setExpandedRows] = useState(new Set())
   const [observedAt, setObservedAt] = useState('')
-  const [totalFetched, setTotalFetched] = useState(0)
   const [sourcePagesFetched, setSourcePagesFetched] = useState(0)
   const [sourceStats, setSourceStats] = useState([])
   const [sourceWarnings, setSourceWarnings] = useState([])
@@ -184,6 +186,7 @@ export function App() {
         minPrice: nextFilters.minPrice || '0',
         profession: nextFilters.profession,
         race: nextFilters.race,
+        linkedAccount: nextFilters.linkedAccount,
       })
       if (nextFilters.maxPrice) params.set('maxPrice', nextFilters.maxPrice)
       if (nextFilters.minMemberDays) params.set('minMemberDays', nextFilters.minMemberDays)
@@ -198,7 +201,6 @@ export function App() {
       setAllItems(nextItems)
       setItems(filteredItems)
       setObservedAt(payload.observedAt)
-      setTotalFetched(payload.totalFetched)
       setSourcePagesFetched(payload.sourcePagesFetched)
       setSourceStats(payload.sources || [])
       setSourceWarnings(payload.warnings || [])
@@ -218,7 +220,6 @@ export function App() {
   }, [defaultFilters, refresh])
 
   const sortedItems = useMemo(() => sortRows(items, sortConfig), [items, sortConfig])
-
   const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize))
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -261,11 +262,6 @@ export function App() {
     setSortConfig(nextSort)
     setCurrentPage(1)
     setExpandedRows(defaultExpandedRows(items, nextSort))
-  }
-
-  const handlePageSizeChange = (event) => {
-    setPageSize(Number(event.target.value))
-    setCurrentPage(1)
   }
 
   const toggleRow = (item) => {
@@ -355,21 +351,22 @@ export function App() {
 
           <label className="field-group">
             <span>种族</span>
-            <select
-              value={filters.race}
-              onChange={(event) => setFilters({ ...filters, race: event.target.value })}
-            >
+            <select value={filters.race} onChange={(event) => setFilters({ ...filters, race: event.target.value })}>
               {races.map((race) => <option key={race}>{race}</option>)}
             </select>
           </label>
 
           <label className="field-group">
             <span>职业</span>
-            <select
-              value={filters.profession}
-              onChange={(event) => setFilters({ ...filters, profession: event.target.value })}
-            >
+            <select value={filters.profession} onChange={(event) => setFilters({ ...filters, profession: event.target.value })}>
               {professions.map((profession) => <option key={profession}>{profession}</option>)}
+            </select>
+          </label>
+
+          <label className="field-group">
+            <span>连体号</span>
+            <select value={filters.linkedAccount} onChange={(event) => setFilters({ ...filters, linkedAccount: event.target.value })}>
+              {linkedAccountOptions.map((option) => <option key={option}>{option}</option>)}
             </select>
           </label>
 
@@ -406,6 +403,7 @@ export function App() {
           <b>价格 ≥ {appliedFilters.minPrice || 0}</b>
           {appliedFilters.maxPrice && <b>价格 ≤ {appliedFilters.maxPrice}</b>}
           <b>{appliedFilters.profession}</b>
+          <b>连体号：{appliedFilters.linkedAccount}</b>
           {appliedFilters.minMemberDays && <b>会员 ≥ {appliedFilters.minMemberDays} 天</b>}
           <b>来源：螃蟹 + 7881</b>
         </div>
@@ -440,7 +438,7 @@ export function App() {
         <div className="results-header">
           <div>
             <h3>账号列表</h3>
-            <p>表头可切换价格、装等、战斗力和会员天数排序；展开行展示详情页卖家说。</p>
+            <p>表头可切换价格、装等、战斗力、会员天数和发布时间排序；连体号会从标题、卖家说和小号描述中识别。</p>
           </div>
         </div>
 
@@ -454,6 +452,7 @@ export function App() {
                 <th>种族</th>
                 <th><SortHeader label="价格" name="price" sortConfig={sortConfig} onSort={handleSort} /></th>
                 <th>职业</th>
+                <th>连体号</th>
                 <th><SortHeader label="装等" name="equipment" sortConfig={sortConfig} onSort={handleSort} /></th>
                 <th><SortHeader label="战斗力" name="combat" sortConfig={sortConfig} onSort={handleSort} /></th>
                 <th><SortHeader label="会员天数" name="membership" sortConfig={sortConfig} onSort={handleSort} /></th>
@@ -463,10 +462,10 @@ export function App() {
             </thead>
             <tbody>
               {loading && !items.length && Array.from({ length: 7 }).map((_, index) => (
-                <tr className="skeleton-row" key={index}>{Array.from({ length: 11 }).map((__, cell) => <td key={cell}><span /></td>)}</tr>
+                <tr className="skeleton-row" key={index}>{Array.from({ length: 12 }).map((__, cell) => <td key={cell}><span /></td>)}</tr>
               ))}
               {!loading && !sortedItems.length && (
-                <tr><td colSpan="11"><div className="empty-state"><MagnifyingGlass size={28} /><strong>没有符合条件的账号</strong><span>调整条件后点击“查询”筛选当前数据，或点击“重新抓取”更新来源数据。</span></div></td></tr>
+                <tr><td colSpan="12"><div className="empty-state"><MagnifyingGlass size={28} /><strong>没有符合条件的账号</strong><span>调整条件后点击“查询”筛选当前数据，或点击“重新抓取”更新来源数据。</span></div></td></tr>
               )}
               {paginatedItems.map((item) => {
                 const key = rowKey(item)
@@ -484,6 +483,7 @@ export function App() {
                       <td><span className="race-tag">{item.race}</span></td>
                       <td><strong className="price-cell">{formatCurrency(item.priceYuan)}</strong></td>
                       <td>{item.profession || '-'}</td>
+                      <td><span className="linked-tag">{item.linkedAccountLabel || '-'}</span></td>
                       <td>{item.equipmentLevel || '-'}</td>
                       <td><span className="power-value">{item.combatPower || '-'}</span></td>
                       <td><span className="member-value">{item.membershipDays === null ? '-' : `${item.membershipDays}天`}</span></td>
@@ -492,7 +492,7 @@ export function App() {
                     </tr>
                     {expanded && (
                       <tr className="detail-row">
-                        <td colSpan="11">
+                        <td colSpan="12">
                           <div className="seller-remark">
                             <strong>卖家说</strong>
                             <p>{item.sellerRemark || item.title || '暂无卖家说内容'}</p>
@@ -510,7 +510,7 @@ export function App() {
           <nav className="pagination" aria-label="结果分页">
             <div className="pagination-meta">
               <span>第 {currentPage} / {totalPages} 页，每页</span>
-              <select className="page-size-select" value={pageSize} onChange={handlePageSizeChange} aria-label="每页显示条数">
+              <select className="page-size-select" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setCurrentPage(1) }} aria-label="每页显示条数">
                 {pageSizeOptions.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
               <span>条，共 {sortedItems.length} 条</span>

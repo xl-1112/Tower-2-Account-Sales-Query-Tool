@@ -29,6 +29,8 @@
 - 已将默认种族筛选改为“全部”，初始抓取覆盖天族和魔族；分页支持每页 10、50、100 条本地切换。
 - 已新增 EdgeOne Pages Function：`aion2-market-dashboard/cloud-functions/api/listings.js`，线上 `/api/listings` 复用本地 `scrapeListings`。
 - 已将螃蟹来源改为直接调用 `api-pc.pxb7.com/api/search/product/v2/selectSearchPageList` JSON 接口，线上不再依赖 Playwright 或本机 Chrome；7881 继续使用公开搜索接口签名逻辑。
+- 已新增连体号筛选与展示：支持全部、4连号、5连号、6连号、7连号、8连号；数据模型新增 `linkedAccountCount` / `linkedAccountLabel`。
+- 已支持从卖家说/标题中推断连体号：显式“4连号/连体号-5连号”直接识别；“小号158杀+181护+154弓”按主号+3个小号识别为 4 连号。
 
 ## Verification
 
@@ -45,6 +47,7 @@
 | 查询网站交互验证 | in-app browser at `http://127.0.0.1:4173/` | 查询/重新抓取双按钮存在；无子集表头；默认 3 条卖家说展开；点击装等排序不重新抓取；发布时间排序夹具验证通过 |
 | 查询网站分页验证 | in-app browser at `http://127.0.0.1:4173/` | 默认种族为全部；每页 10/50/100 切换可用，切换后回到第 1 页且不新增 `/api/listings` 调用 |
 | EdgeOne Function 迁移验证 | `cloud-functions/api/listings.js` + local preview `/api/listings` | 直接调用函数返回 200 条，螃蟹/7881 各 100 条；本地 preview 返回 `Count=200`、`SourceCount=2`、`Warnings=0` |
+| 连体号筛选验证 | `npm test` + Cloud Function fixture/live call | 10 项测试通过；`linkedAccount=4连号` 实测返回 47 条且结果标签均为 `4连号` |
 
 ## Existing User Changes
 
