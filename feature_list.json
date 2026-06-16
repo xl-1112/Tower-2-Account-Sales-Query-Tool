@@ -1,0 +1,108 @@
+{
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "微信 AI SKILL 开发基线",
+      "description": "建立仓库级约束、官方规范摘要、状态文件和自动校验入口。",
+      "dependencies": [],
+      "status": "completed",
+      "evidence": "已创建 AGENTS.md、docs/wechat-ai-skill-contract.md、验证脚本和会话状态文件；执行 node scripts/validate-wechat-ai-skill.mjs。"
+    },
+    {
+      "id": "data-001",
+      "name": "永恒之塔2售卖数据单页获取验证",
+      "description": "在用户已打开的目标列表页中，只读获取最多 3 条公开售卖样本；不发起网络采集、不翻页、不访问详情、不落库。",
+      "dependencies": ["feat-001"],
+      "status": "completed",
+      "evidence": "目标页 https://www.pxb7.com/buy/175178554941486/1 可见公开商品；scripts/probe-aion2-listings.browser.mjs 成功读取当前 DOM 的 3 条样本；node scripts/validate-aion2-data-probe.mjs 通过。"
+    },
+    {
+      "id": "data-002",
+      "name": "永恒之塔2单页售卖字段解析",
+      "description": "按账号、天族、价格下限 500 的当前筛选结果，解析单次列表前 16 条的区名、种族、价格、职业、装等、战斗力、发布时间和详情链接。",
+      "dependencies": ["data-001"],
+      "status": "completed",
+      "evidence": "浏览器真实页面单次读取前 16 条并解析 8 个目标字段；node scripts/validate-aion2-data-probe.mjs 与 bash init.sh 通过。"
+    },
+    {
+      "id": "data-003",
+      "name": "永恒之塔2售卖数据查询网站",
+      "description": "提供价格、职业查询和价格升降序切换；提交查询时重新读取公开列表页，最多处理当前页前 16 条，不翻页、不登录、不持久化。",
+      "dependencies": ["data-002"],
+      "status": "completed",
+      "evidence": "aion2-market-dashboard 已实现实时抓取 API、查询表单、价格摘要、八字段列表和本地升降序；npm test、npm run build、浏览器价格/职业筛选与排序验证通过；design-qa.md 为 passed。"
+    },
+    {
+      "id": "data-004",
+      "name": "永恒之塔2全量滚动抓取与网站分页",
+      "description": "在隔离的无登录浏览器会话中应用天族、价格和职业筛选，模拟页面滚动触发每批 16 条的原生查询请求，直到没有新增数据；网站按每页 10 条分页展示。",
+      "dependencies": ["data-003"],
+      "status": "completed",
+      "evidence": "默认条件实测加载 87 个源分页、去重汇总 1392 条并展示为 140 个网站分页；每页 10 条、上一页/下一页、页码跳转和价格排序重置页码均通过浏览器验证。"
+    },
+    {
+      "id": "data-005",
+      "name": "永恒之塔2限量抓取与账号详情增强",
+      "description": "每个平台单次抓取最多 100 条；查询条件新增种族和会员天数；每条账号数据增加来源、会员天数、卖家说和角色子集，子集从详情页卖家说中解析。",
+      "dependencies": ["data-004"],
+      "status": "completed",
+      "evidence": "螃蟹源实测 81.9 秒抓取 7 个源页、100 条封顶数据；返回来源=螃蟹，详情页卖家说可解析会员天数和 4连号/小号子集；npm test、npm run build 通过。"
+    },
+    {
+      "id": "data-006",
+      "name": "永恒之塔2 7881 来源接入",
+      "description": "接入 7881 永恒之塔2账号搜索接口，按价格、种族和职业条件重新抓取；映射 7881 的战力值、战力评分K、连体号和详情链接，并与螃蟹来源合并分页展示。",
+      "dependencies": ["data-005"],
+      "status": "completed",
+      "evidence": "真实 API 验证 85.9 秒返回 200 条：螃蟹 100 条、7881 100 条；7881 抓取 4 个源页，首条 7881 数据含区服、种族、价格、职业、战力值、战力评分K、5连号和详情链接；npm test、npm run build 通过。"
+    },
+    {
+      "id": "data-007",
+      "name": "永恒之塔2本地查询、表头排序与卖家说展开",
+      "description": "查询条件新增只筛选当前已抓取数据的查询按钮；重新抓取按钮才访问来源平台；价格、装等、战斗力、会员天数和发布时间排序移入表头；移除子集列，改为每行展开卖家说详情，默认展开前 3 行。",
+      "dependencies": ["data-006"],
+      "status": "completed",
+      "evidence": "浏览器验证：页面含查询/重新抓取双按钮、无子集表头、价格/装等/战斗力/会员天数/发布时间表头排序均可见；首轮数据完成后第 1 页 10 条中默认展开 3 条卖家说；点击装等排序后状态保持数据已更新且未重新抓取；发布时间排序夹具验证 apiCalls=1、升序最早在前、降序最新在前；npm test、npm run build 通过。"
+    },
+    {
+      "id": "data-008",
+      "name": "永恒之塔2默认全种族抓取与分页大小切换",
+      "description": "默认种族筛选改为全部，抓取天族和魔族；网站分页支持每页 10、50、100 条本地切换，切换页数不触发重新抓取。",
+      "dependencies": ["data-007"],
+      "status": "completed",
+      "evidence": "前端默认 race=全部，后端 scrapeListings 与 Vite API 默认 race=全部；7881 在全部时不传 groupId，螃蟹在全部时不点击种族筛选。分页新增每页 10/50/100 下拉，切换后回到第 1 页并仅重算本地分页。验证通过：node scripts/validate-wechat-ai-skill.mjs、node scripts/validate-aion2-data-probe.mjs、npm test、npm run build；浏览器夹具 65 条数据验证 apiCalls=1、初始请求 race=全部、分页从 10 切到 50/100 不新增 API 调用。"
+    },
+    {
+      "id": "feat-002",
+      "name": "校园物联网业务边界",
+      "description": "确认校园角色、设备类型、可查询数据、允许控制动作、审批要求、鉴权来源和隐私边界。",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-003",
+      "name": "校园物联网 SKILL 契约",
+      "description": "编写 campus-iot-skill/SKILL.md，并确定用户意图、接口调用顺序、错误恢复和高风险动作限制。",
+      "dependencies": ["feat-002"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-004",
+      "name": "校园物联网 MCP 与原子能力",
+      "description": "实现 mcp.json、index.js、apis 和必要的原子组件/半屏页面，保证声明与注册一致。",
+      "dependencies": ["feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-005",
+      "name": "校园物联网验证与交付",
+      "description": "完成自动校验、开发者工具 Nightly 调试、典型意图评测、权限与失败路径验证。",
+      "dependencies": ["feat-004"],
+      "status": "not-started",
+      "evidence": ""
+    }
+  ]
+}

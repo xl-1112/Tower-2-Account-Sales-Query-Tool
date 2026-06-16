@@ -1,0 +1,21 @@
+# Prototype Instructions
+
+Run the local server yourself and open the preview in the in-app browser. Do not give the user server-start instructions when you can run it.
+
+Before making substantial visual changes, use the Product Design plugin's `get-context` skill when the visual source is unclear or no longer matches the current goal. When the user gives durable prototype-specific design feedback, preferences, or decisions, record them in `AGENTS.md`.
+
+When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
+
+## Durable Design Decisions
+
+- Match the supplied pxb7 filter screenshot: white surfaces, restrained gray borders, compact PingFang typography, and orange selection states.
+- Keep the dashboard desktop-first and responsive; preserve table readability with horizontal scrolling on narrow screens.
+- Use two interaction modes: `查询` filters the already fetched in-memory dataset only, while `重新抓取` fetches fresh data from source platforms.
+- To reduce rate-limit risk, each source platform returns at most 100 records per scrape. Keep this cap when adding new platforms.
+- Default race is `全部`, so fresh scrapes include both 天族 and 魔族 unless the user selects a specific race.
+- Price, equipment, combat power, membership-day, published-time sorting, local filtering, website pagination, and page-size switching are local and must not trigger another scrape.
+- Page-size options are 10, 50, and 100 rows per page; switching page size returns to page 1.
+- Always show scrape status and timestamp so stale data is not presented as live.
+- Use the source game's real icon and Phosphor icons; do not replace visible assets with text glyphs or handmade shapes.
+- Source values are `螃蟹` and `7881`; both are implemented. `螃蟹` uses the public page through a no-login browser session, and `7881` uses the public search page's same-origin list API with its page signing logic.
+- Detail page seller speech is shown in expandable table rows, with the first 3 sorted rows expanded by default. If one detail page fails, keep the account row with list-page fields and leave seller-derived fields empty.

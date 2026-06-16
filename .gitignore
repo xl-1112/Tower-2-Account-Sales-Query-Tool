@@ -3,3 +3,13 @@
 
 # 日志
 *.log
+
+# Node / frontend generated files
+node_modules/
+dist/
+.npm-cache/
+.vite.*.log
+aion2-market-dashboard/.npmrc
+
+# Local visual verification captures
+artifacts/
