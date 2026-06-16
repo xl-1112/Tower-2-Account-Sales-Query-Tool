@@ -38,7 +38,7 @@ function attribute(chunk, name) {
 }
 
 function chineseCount(value) {
-  const map = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
+  const map = { 一: 1, 二: 2, 两: 2, 俩: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
   return Number(value) || map[value] || null
 }
 
@@ -69,6 +69,33 @@ function parseSmallAccountSegment(segment = '') {
     .split(/[+＋，、和,]/)
     .map((value) => value.trim())
     .filter((value) => /\d/.test(value))
+}
+
+function collectTextFragments(value) {
+  if (value === null || value === undefined || value === '') return []
+  if (Array.isArray(value)) return value.flatMap(collectTextFragments)
+  if (typeof value === 'object') return Object.values(value).flatMap(collectTextFragments)
+  return [String(value)]
+}
+
+function joinTextFragments(...values) {
+  return values.flatMap(collectTextFragments).join(' ')
+}
+
+function parseSmallAccountCountHint(text = '') {
+  const normalized = String(text).replace(/\s+/g, '')
+  const patterns = [
+    /([一二两俩三四五六七八九十\d]+)个?小号/,
+    /小号([一二两俩三四五六七八九十\d]+)个/,
+    /除(?:账号)?本身还(?:有|存在)([一二两俩三四五六七八九十\d]+)个?(?:小号|角色|号)?/,
+    /还(?:有|存在)([一二两俩三四五六七八九十\d]+)个?(?:小号|角色|号)/,
+  ]
+
+  for (const pattern of patterns) {
+    const count = chineseCount(normalized.match(pattern)?.[1])
+    if (count) return count
+  }
+  return null
 }
 
 export function parseMembershipDays(text = '') {
@@ -121,6 +148,18 @@ export function parseChildCharacters(text = '') {
     })
   }
 
+  const countedSmallMatch = normalized.match(/(?:[一二两俩三四五六七八九十\d]+个?)?小号([^。；;]*)/)
+  if (
+    !numericAltMatch
+    && parseSmallAccountCountHint(normalized)
+    && countedSmallMatch
+    && !/\d+个[\d.]+\s*[Kk]/.test(countedSmallMatch[1])
+  ) {
+    for (const match of countedSmallMatch[1].matchAll(/([\d.]+)\s*[Kk]/g)) {
+      appendSmallChild(children, `${match[1]}K`)
+    }
+  }
+
   const roleAltMatch = normalized.match(/小号((?:\d+[^\d，。；;+＋和]*)[+＋](?:\d+[^\d，。；;+＋和]*)(?:[+＋]\d+[^\d，。；;+＋和]*)*)/)
   if (roleAltMatch && /[+＋]/.test(roleAltMatch[1])) {
     parseSmallAccountSegment(roleAltMatch[1]).forEach((value) => appendSmallChild(children, value))
@@ -144,7 +183,9 @@ export function parseLinkedAccountCount(text = '') {
   if (explicitMatch) return chineseCount(explicitMatch[1])
 
   const childCount = parseChildCharacters(text).filter((child) => child.type === '小号').length
-  return childCount > 0 ? childCount + 1 : null
+  const hintedChildCount = parseSmallAccountCountHint(text)
+  const inferredChildCount = Math.max(childCount, hintedChildCount || 0)
+  return inferredChildCount > 0 ? inferredChildCount + 1 : null
 }
 
 export function enrichListingWithSellerRemark(item, sellerRemark = '') {
@@ -167,7 +208,7 @@ export function normalizeListing(raw) {
     : decodeHtml(raw.metadata || '').split(',').map((value) => value.trim())
   const cents = Number(raw.price)
   const sellerRemark = raw.sellerRemark || ''
-  const detailText = `${title} ${sellerRemark}`
+  const detailText = joinTextFragments(title, sellerRemark, raw.linkedAccountText)
   const equipmentLevel = title.match(/装等\s*([\d.]+)/)?.[1] || null
   const combatPower = title.match(/战斗力\s*([\d.]+\s*[KkMm]?)/)?.[1]?.replace(/\s+/g, '') || null
   const membershipDays = parseMembershipDays(detailText)
@@ -197,6 +238,18 @@ export function normalizeListing(raw) {
 }
 
 export function normalizePxb7ApiListing(raw) {
+  const linkedAccountText = joinTextFragments(
+    raw.important,
+    raw.importantHighlights,
+    raw.label,
+    raw.mainLabel,
+    raw.userActionTag,
+    raw.shortTitle,
+    raw.profile,
+    raw.attrDocs,
+    raw.attrValues,
+  )
+
   return normalizeListing({
     productId: raw.productId,
     title: raw.showTitle,
@@ -204,6 +257,7 @@ export function normalizePxb7ApiListing(raw) {
     price: raw.price,
     publishedAtLabel: raw.shelveUpTimeText || raw.shelveUpTime || raw.shelveUpTimeFormat,
     sellerRemark: raw.showTitle,
+    linkedAccountText,
     source: PXB7_SOURCE_NAME,
   })
 }

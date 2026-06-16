@@ -66,6 +66,21 @@ test('normalizePxb7ApiListing maps direct PXB7 API goods into the shared table m
   assert.equal(item.detailUrl, 'https://www.pxb7.com/product/2231636572488668783/1')
 })
 
+test('normalizePxb7ApiListing reads linked-account labels from PXB7 important tags first', () => {
+  const item = normalizePxb7ApiListing({
+    productId: '2231752357888798043',
+    price: 50000,
+    showTitle: '【伊斯拉佩爾】45级魔族女剑星，装等4084，战斗力478.86K',
+    attrNameList: ['魔族', '伊斯拉佩爾', 'NC邮箱账号', '剑星', '女'],
+    important: ['盧德萊絕滅刀', '暗龍王臂甲', '同职业4连号'],
+    shelveUpTimeText: '刚刚',
+  })
+
+  assert.equal(item.source, '螃蟹')
+  assert.equal(item.linkedAccountCount, 4)
+  assert.equal(item.linkedAccountLabel, '4连号')
+})
+
 test('parseListings removes duplicate product ids without limiting source pages', () => {
   const card = (id) => `<a href="/product/${id}/1"><span showtitle="装等1 战斗力2K" attrnamelist="天族,天加隆,男,守护星" price="100" shelveuptimetext="刚刚"></span></a>`
   const html = [card(1), card(1), ...Array.from({ length: 20 }, (_, index) => card(index + 2))].join('')
@@ -93,6 +108,13 @@ test('parseChildCharacters extracts child role hints from seller speech', () => 
   ])
 })
 
+test('parseChildCharacters extracts small-account combat powers after role names', () => {
+  assert.deepEqual(parseChildCharacters('两个小号治愈146k，魔道185k'), [
+    { type: '小号', label: '小号1', combatPower: '146K' },
+    { type: '小号', label: '小号2', combatPower: '185K' },
+  ])
+})
+
 test('parseLinkedAccountCount reads explicit linked-account labels', () => {
   assert.equal(parseLinkedAccountCount('同职五连号，会员还有13天'), 5)
   assert.equal(parseLinkedAccountCount('连体号-6连号'), 6)
@@ -107,6 +129,11 @@ test('parseLinkedAccountCount infers linked accounts from seller speech with rol
     { type: '小号', label: '小号2', combatPower: '181护' },
     { type: '小号', label: '小号3', combatPower: '154弓' },
   ])
+})
+
+test('parseLinkedAccountCount infers linked accounts from counted small-account descriptions', () => {
+  assert.equal(parseLinkedAccountCount('除账号本身还存在三个小号，治愈146k，魔道185k，弓星190k'), 4)
+  assert.equal(parseLinkedAccountCount('还有四个角色，146k，185k，190k，200k'), 5)
 })
 
 test('parseMembershipDays avoids distant numeric fields and reads explicit member context', () => {

@@ -87,6 +87,14 @@
       "dependencies": ["data-010"],
       "status": "completed",
       "evidence": "新增 parseMembershipDays 回归测试，覆盖深渊点 15280、200000、11111111天等误判样本；真实抓取 200 条后会员天数 >10000 的异常为 0。验证通过：npm test 11项、npm run build、node scripts/validate-aion2-data-probe.mjs。"
+    },
+    {
+      "id": "data-012",
+      "name": "螃蟹来源连体号接口标签接入",
+      "description": "优先读取螃蟹列表接口 important/importantHighlights 等标签中的同职业X连号，并映射为 linkedAccountCount/linkedAccountLabel；无接口标签时继续从标题和卖家说中的小号战力描述推断连体号。",
+      "dependencies": ["data-011"],
+      "status": "completed",
+      "evidence": "螃蟹 API 原始数据确认 important 含同职业4连号/6连号；normalizePxb7ApiListing 已合并接口标签参与解析。新增小号角色战力和数量提示回归测试。验证通过：npm test 14项、npm run build、node scripts/validate-aion2-data-probe.mjs；Cloud Function 入口 linkedAccount=4连号 返回84条，其中螃蟹39条且 labels=[4连号]。"
     }
   ]
 }
