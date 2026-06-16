@@ -79,6 +79,14 @@
       "dependencies": ["data-009"],
       "status": "completed",
       "evidence": "前端新增连体号筛选和表格列；/api/listings 支持 linkedAccount 参数；解析层新增 parseLinkedAccountCount，优先读取显式连号，缺省时按小号数量+主号推断。验证通过：npm test 10项、npm run build、node scripts/validate-aion2-data-probe.mjs；Cloud Function 入口 linkedAccount=4连号 实测返回47条且 labels=[4连号]。"
+    },
+    {
+      "id": "data-011",
+      "name": "永恒之塔2会员天数识别修正",
+      "description": "收紧会员天数解析规则，只从明确会员、战令、通行证上下文和会员到期日期中识别天数，避免把深渊点、战力值、标题数字或天族字段误判为会员天数。",
+      "dependencies": ["data-010"],
+      "status": "completed",
+      "evidence": "新增 parseMembershipDays 回归测试，覆盖深渊点 15280、200000、11111111天等误判样本；真实抓取 200 条后会员天数 >10000 的异常为 0。验证通过：npm test 11项、npm run build、node scripts/validate-aion2-data-probe.mjs。"
     }
   ]
 }

@@ -31,6 +31,7 @@
 - 已将螃蟹来源改为直接调用 `api-pc.pxb7.com/api/search/product/v2/selectSearchPageList` JSON 接口，线上不再依赖 Playwright 或本机 Chrome；7881 继续使用公开搜索接口签名逻辑。
 - 已新增连体号筛选与展示：支持全部、4连号、5连号、6连号、7连号、8连号；数据模型新增 `linkedAccountCount` / `linkedAccountLabel`。
 - 已支持从卖家说/标题中推断连体号：显式“4连号/连体号-5连号”直接识别；“小号158杀+181护+154弓”按主号+3个小号识别为 4 连号。
+- 已修正会员天数识别：只从明确会员/战令/通行证上下文和会员到期日期解析，避免把深渊点、战力值、标题数字或天族字段误判为会员天数。
 
 ## Verification
 
@@ -40,7 +41,7 @@
 | 完整启动检查 | `bash init.sh` | 所有检查通过 |
 | AI 运行时 | 微信开发者工具 Nightly 最新版 | SKILL 可加载、接口可调用、卡片可展示 |
 | 售卖数据探针 | `node scripts/validate-aion2-data-probe.mjs` | `Aion2 listing data probe validation passed` |
-| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 6 tests passed |
+| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 11 tests passed |
 | 查询网站生产构建 | `cd aion2-market-dashboard && npm run build` | Vite build passed |
 | 查询网站真实抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 81.9 秒返回 100 条、7 个来源页、来源=螃蟹、首条含 `4连号` 子集 |
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
@@ -48,6 +49,7 @@
 | 查询网站分页验证 | in-app browser at `http://127.0.0.1:4173/` | 默认种族为全部；每页 10/50/100 切换可用，切换后回到第 1 页且不新增 `/api/listings` 调用 |
 | EdgeOne Function 迁移验证 | `cloud-functions/api/listings.js` + local preview `/api/listings` | 直接调用函数返回 200 条，螃蟹/7881 各 100 条；本地 preview 返回 `Count=200`、`SourceCount=2`、`Warnings=0` |
 | 连体号筛选验证 | `npm test` + Cloud Function fixture/live call | 10 项测试通过；`linkedAccount=4连号` 实测返回 47 条且结果标签均为 `4连号` |
+| 会员天数修正验证 | live scrape anomaly scan | 真实抓取 200 条后 `membershipDays > 10000` 异常为 0 条 |
 
 ## Existing User Changes
 

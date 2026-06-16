@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-06-16
-**Active Feature:** data-010 - 永恒之塔2连体号筛选与卖家说推断（已完成）
+**Active Feature:** data-011 - 永恒之塔2会员天数识别修正（已完成）
 
 ## What's Done
 
@@ -41,6 +41,8 @@
 - [x] 查询条件新增“连体号”：全部、4连号、5连号、6连号、7连号、8连号。
 - [x] 商品数据新增 `linkedAccountCount` / `linkedAccountLabel`，并在表格展示连体号列。
 - [x] 连体号解析优先读取显式“4连号/5连号/连体号-5连号”；无显式字段时，从“主号 + 小号...”推断，例如“小号158杀+181护+154弓”识别为 4 连号。
+- [x] 收紧会员天数解析，只接受明确会员/战令/通行证上下文和会员到期日期，避免把深渊点、战力值、标题数字或天族字段误判为会员天数。
+- [x] 真实抓取 200 条后检查会员天数异常值，`membershipDays > 10000` 的结果为 0 条。
 
 ## What's Next
 
@@ -66,4 +68,5 @@
 - 查询网站分页验证：默认种族为全部；每页 10/50/100 切换只更新本地分页，未新增 `/api/listings` 调用
 - EdgeOne Function 验证：直接调用 `cloud-functions/api/listings.js` 返回 200 条，螃蟹/7881 各 100 条；本地 preview 的 `/api/listings` 返回 `Count=200`、`SourceCount=2`、`Warnings=0`
 - 连体号验证：`npm test` 10 项通过；Cloud Function 入口带 `linkedAccount=4连号` 实测返回 47 条，所有结果 `linkedAccountLabel` 均为 `4连号`
+- 会员天数修正验证：`npm test` 11 项通过；真实抓取 200 条后 `weirdCount=0`；`npm run build`、`node scripts/validate-aion2-data-probe.mjs` 通过
 - 设计 QA：`aion2-market-dashboard/design-qa.md`

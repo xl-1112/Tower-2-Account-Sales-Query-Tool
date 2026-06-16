@@ -73,13 +73,25 @@ function parseSmallAccountSegment(segment = '') {
 
 export function parseMembershipDays(text = '') {
   const normalized = String(text).replace(/\s+/g, '')
-  const match = normalized.match(/会员(?:还剩|还有|剩余)?(\d+)天/)
-    || normalized.match(/(\d+)天.*(?:会员|通行证)/)
-  if (match) return Number(match[1])
+  if (/(?:无|没|没有)会员/.test(normalized)) return 0
 
-  const dateMatches = [...normalized.matchAll(/20\d{2}-\d{2}-\d{2}(?=到期|，|,|。|$)/g)]
-  const remainingDays = dateMatches.map(([dateText]) => {
-    const expiresAt = new Date(`${dateText}T23:59:59+08:00`).getTime()
+  const dayPatterns = [
+    /(?:会员|通行证|战令|会员战令)[:：]?[^，,。；;】)]{0,24}?(?:还剩|还有|剩余)(\d{1,4})天/,
+    /(?:会员|通行证|战令|会员战令)[:：]?(\d{1,4})天/,
+    /(?:还剩|还有|剩余)(\d{1,4})天(?:会员|通行证|战令)/,
+    /(\d{1,4})天(?:会员|通行证|战令)/,
+  ]
+  for (const pattern of dayPatterns) {
+    const match = normalized.match(pattern)
+    const days = Number(match?.[1])
+    if (Number.isFinite(days) && days >= 0 && days <= 3660) return days
+  }
+
+  const dateMatches = [
+    ...normalized.matchAll(/(?:会员|通行证|战令|会员战令)[:：]?[^，,。；;】)]{0,40}?(20\d{2}-\d{2}-\d{2})(?:到期)?/g),
+  ]
+  const remainingDays = dateMatches.map((match) => {
+    const expiresAt = new Date(`${match[1]}T23:59:59+08:00`).getTime()
     return Math.ceil((expiresAt - Date.now()) / 86400000)
   }).filter((days) => Number.isFinite(days) && days >= 0)
   return remainingDays.length ? Math.max(...remainingDays) : null

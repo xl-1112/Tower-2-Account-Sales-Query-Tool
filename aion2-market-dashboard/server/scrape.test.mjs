@@ -9,6 +9,7 @@ import {
   parseChildCharacters,
   parseLinkedAccountCount,
   parseListings,
+  parseMembershipDays,
   parseSellerRemark,
 } from './scrape.mjs'
 
@@ -106,6 +107,13 @@ test('parseLinkedAccountCount infers linked accounts from seller speech with rol
     { type: '小号', label: '小号2', combatPower: '181护' },
     { type: '小号', label: '小号3', combatPower: '154弓' },
   ])
+})
+
+test('parseMembershipDays avoids distant numeric fields and reads explicit member context', () => {
+  assert.equal(parseMembershipDays('深渊点:15280 天族武器: 閃耀短劍 周一刚刚充的会员'), null)
+  assert.equal(parseMembershipDays('深渊点:200000 天族武器: 盧德萊心臟 没会员 号上还有3亿基纳'), 0)
+  assert.equal(parseMembershipDays('会员还有13天，4连号'), 13)
+  assert.equal(parseMembershipDays('11111111天 梅斯蘭泰蓮 天8'), null)
 })
 
 test('enrichListingWithSellerRemark adds seller-derived account details', () => {
