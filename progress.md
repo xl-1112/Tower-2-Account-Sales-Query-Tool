@@ -7,10 +7,7 @@
 
 ## What's Done
 
-- [x] 阅读微信官方 AI 开发模式能力介绍和 SKILL 封装文档。
-- [x] 明确 SKILL 由业务说明、MCP 声明、原子接口、原子组件和注册入口组成。
 - [x] 创建最小开发 harness 和自动一致性校验脚本。
-- [x] 将现有饮品 SKILL 作为后续校园物联网实现的参考样例。
 - [x] 审计现有 harness，五个子系统评分为 100/100。
 - [x] 确认永恒之塔2台服账号目标列表页并读取公开商品样本。
 - [x] 新增只读 DOM 探针，限制为当前页前 16 条，不发起网络请求。
@@ -41,19 +38,12 @@
 
 ## What's Next
 
-1. 若扩展定时任务或数据保存，先确认站点授权、抓取频率和保留周期。
-2. 校园物联网任务恢复时，继续 `feat-002`，先明确业务场景和角色权限。
-
 ## Blockers / Risks
 
-- 校园设备平台的真实 API、鉴权方式和设备模型尚未提供；正式实现前需要业务契约。
-- 门禁、供电、消防等动作具有安全风险，未确认审批链前不得设计为直接执行。
-- 微信 AI 开发模式仍处于 beta，必须使用开发者工具 Nightly 最新版进行验证。
 - 螃蟹对直接 HTTP 请求返回反自动化挑战；当前网站使用本机无登录 headless 浏览器和页面原生滚动，不绕过验证、不使用用户 Cookie。7881 使用公开搜索页同源接口和页面签名逻辑。
 
 ## Decisions Made
 
-- 使用一个独立的 `campus-iot-skill`，不把校园能力混入现有饮品 SKILL。
 - 优先查询、告警和低风险控制；高风险动作采用申请/审批模式。
 - 自动检查声明、注册、路径和组件关联页的一致性，手工检查模型意图与卡片体验。
 - 角色交易网站按用户筛选抓取螃蟹和 7881，单平台单次最多保留 100 条；默认种族为“全部”，包含天族和魔族；网站分页可在 10、50、100 条之间切换，本地查询、排序和翻页均在前端完成，不重复抓取，不保存历史数据。
@@ -62,8 +52,6 @@
 
 ## Evidence
 
-- 官方文档：https://developers.weixin.qq.com/miniprogram/dev/ai/guide.html
-- 官方接入文档：https://developers.weixin.qq.com/miniprogram/dev/ai/integration.html
 - 验证命令：`node scripts/validate-wechat-ai-skill.mjs`
 - 探针验证：`node scripts/validate-aion2-data-probe.mjs`
 - 查询网站验证：`cd aion2-market-dashboard && npm test && npm run build`

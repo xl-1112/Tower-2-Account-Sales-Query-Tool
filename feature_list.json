@@ -1,14 +1,6 @@
 {
   "features": [
     {
-      "id": "feat-001",
-      "name": "微信 AI SKILL 开发基线",
-      "description": "建立仓库级约束、官方规范摘要、状态文件和自动校验入口。",
-      "dependencies": [],
-      "status": "completed",
-      "evidence": "已创建 AGENTS.md、docs/wechat-ai-skill-contract.md、验证脚本和会话状态文件；执行 node scripts/validate-wechat-ai-skill.mjs。"
-    },
-    {
       "id": "data-001",
       "name": "永恒之塔2售卖数据单页获取验证",
       "description": "在用户已打开的目标列表页中，只读获取最多 3 条公开售卖样本；不发起网络采集、不翻页、不访问详情、不落库。",
@@ -71,38 +63,6 @@
       "dependencies": ["data-007"],
       "status": "completed",
       "evidence": "前端默认 race=全部，后端 scrapeListings 与 Vite API 默认 race=全部；7881 在全部时不传 groupId，螃蟹在全部时不点击种族筛选。分页新增每页 10/50/100 下拉，切换后回到第 1 页并仅重算本地分页。验证通过：node scripts/validate-wechat-ai-skill.mjs、node scripts/validate-aion2-data-probe.mjs、npm test、npm run build；浏览器夹具 65 条数据验证 apiCalls=1、初始请求 race=全部、分页从 10 切到 50/100 不新增 API 调用。"
-    },
-    {
-      "id": "feat-002",
-      "name": "校园物联网业务边界",
-      "description": "确认校园角色、设备类型、可查询数据、允许控制动作、审批要求、鉴权来源和隐私边界。",
-      "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
-    },
-    {
-      "id": "feat-003",
-      "name": "校园物联网 SKILL 契约",
-      "description": "编写 campus-iot-skill/SKILL.md，并确定用户意图、接口调用顺序、错误恢复和高风险动作限制。",
-      "dependencies": ["feat-002"],
-      "status": "not-started",
-      "evidence": ""
-    },
-    {
-      "id": "feat-004",
-      "name": "校园物联网 MCP 与原子能力",
-      "description": "实现 mcp.json、index.js、apis 和必要的原子组件/半屏页面，保证声明与注册一致。",
-      "dependencies": ["feat-003"],
-      "status": "not-started",
-      "evidence": ""
-    },
-    {
-      "id": "feat-005",
-      "name": "校园物联网验证与交付",
-      "description": "完成自动校验、开发者工具 Nightly 调试、典型意图评测、权限与失败路径验证。",
-      "dependencies": ["feat-004"],
-      "status": "not-started",
-      "evidence": ""
     }
   ]
 }

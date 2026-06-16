@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本仓库是微信小程序 AI 开发模式示例。当前目标是在现有饮品 demo 基础上，设计并实现一个校园物联网 `SKILL`。
+本仓库是永恒之塔2台服账号行情小工具。
 
 ## Startup Workflow / 启动流程
 
@@ -16,28 +16,6 @@ Before writing code：
 `node scripts/validate-aion2-data-probe.mjs`。
 
 Stay in scope：当前功能未要求的重构、依赖升级和业务改写一律不做。
-
-## 微信 AI SKILL 不变量
-
-- 一个 SKILL 至少包含 `SKILL.md`、`mcp.json`、`index.js`、`apis/`；需要卡片时再加入 `components/`。
-- `app.json.agent.skills[].path`、`wx.modelContext.createSkill(path)` 和实际目录必须完全一致。
-- `mcp.json.apis[].name` 必须与 `skill.registerAPI(name, handler)` 一一对应，不能漏注册、重复或只写一侧。
-- `inputSchema`、`outputSchema` 遵循 JSON Schema；字段描述应说明来源、边界、必填条件和禁止编造规则。
-- 成功结果使用 `isError: false`；`content` 负责事实与后续动作，`structuredContent` 只放模型需要理解的结构化数据，私有或纯渲染数据放 `_meta`。
-- 失败结果使用 `isError: true`；说明失败事实和可恢复出口，不返回可渲染卡片数据。
-- 绑定原子组件的 API 必须配置 `_meta.ui.componentPath`；对应组件必须在 `mcp.json.components` 中声明 `relatedPage`。
-- 原子组件只设计有限高度内的点击交互，不使用滚动、动画或小程序跳转 API。网络请求和定时器仅在确有实时需求时声明 `scope.dynamic`。
-- 半屏页面只用于详情或补充输入；不得继续页面路由。完成操作后以用户第一人称调用 `sendFollowUpMessage` 回到 AI 流程。
-- 当前能力处于 beta，AI 模式代码不得未经确认合入正式提审版本。
-- 不提交真实 AppID、令牌、设备密钥、校园人员隐私或生产接口凭证。
-
-## 校园物联网设计边界
-
-- 第一阶段只做查询与低风险控制：设备状态、环境数据、告警、教室/实验室设备控制申请。
-- 对开门、断电、消防、门禁放行等高风险动作，默认只查询或创建审批，不直接执行。
-- 所有控制接口都要显式包含设备标识、目标状态、权限依据、幂等键和审计结果。
-- 实时卡片必须给出数据时间戳、数据来源和过期态，避免把历史数据描述为实时状态。
-- 用户、建筑、房间、设备等标识必须来自上游接口返回值或已认证上下文，禁止模型猜测。
 
 ## 公开交易数据探针边界
 
@@ -76,8 +54,3 @@ Before ending：
 3. 更新 `progress.md`；有未完成工作时更新 `session-handoff.md`。
 4. 记录 blockers、风险和下一步，不在验证失败时声称完成。
 5. 保持仓库 clean/restartable；不得删除或覆盖用户已有改动。
-
-## 官方资料
-
-- [能力介绍](https://developers.weixin.qq.com/miniprogram/dev/ai/guide.html#_4%E3%80%81SKILL)
-- [SKILL 封装](https://developers.weixin.qq.com/miniprogram/dev/ai/integration.html#%E4%B8%89%E3%80%81SKILL-%E5%B0%81%E8%A3%85)
