@@ -17,6 +17,8 @@ function listingsApi() {
         race: url.searchParams.get('race') || '全部',
         linkedAccount: url.searchParams.get('linkedAccount') || '全部',
         minMemberDays: Number(url.searchParams.get('minMemberDays') || 0),
+        pxb7Limit: url.searchParams.get('pxb7Limit') || '',
+        source7881Limit: url.searchParams.get('source7881Limit') || '',
       })
 
       res.statusCode = 200

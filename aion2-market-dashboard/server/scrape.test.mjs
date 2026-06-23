@@ -5,6 +5,7 @@ import {
   enrichListingWithSellerRemark,
   filterListings,
   normalize7881Listing,
+  normalizeFilters,
   normalizePxb7ApiListing,
   parseChildCharacters,
   parseLinkedAccountCount,
@@ -210,4 +211,22 @@ test('filterListings applies local price, race, profession, membership, and link
     minMemberDays: 30,
     linkedAccount: '5连号',
   }), [rows[2]])
+})
+
+test('normalizeFilters keeps independent user-provided source limits', () => {
+  assert.deepEqual({
+    pxb7Limit: normalizeFilters({ pxb7Limit: '12', source7881Limit: '45' }).pxb7Limit,
+    source7881Limit: normalizeFilters({ pxb7Limit: '12', source7881Limit: '45' }).source7881Limit,
+  }, {
+    pxb7Limit: 12,
+    source7881Limit: 45,
+  })
+
+  assert.deepEqual({
+    pxb7Limit: normalizeFilters({ pxb7Limit: '0', source7881Limit: 'abc' }).pxb7Limit,
+    source7881Limit: normalizeFilters({ pxb7Limit: '0', source7881Limit: 'abc' }).source7881Limit,
+  }, {
+    pxb7Limit: 100,
+    source7881Limit: 100,
+  })
 })

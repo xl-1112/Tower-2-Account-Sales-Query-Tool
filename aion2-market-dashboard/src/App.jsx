@@ -17,12 +17,19 @@ const pageSizeOptions = [10, 50, 100]
 const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
 
 const defaultSort = { key: 'price', direction: 'asc' }
+const defaultPlatformLimit = { 螃蟹: 100, 7881: 100 }
 const sortLabels = {
   price: '价格',
   equipment: '装等',
   combat: '战斗力',
   membership: '会员天数',
   published: '发布时间',
+}
+
+function formatPlatformLimit(limit = defaultPlatformLimit) {
+  const pxb7Limit = limit?.螃蟹 ?? defaultPlatformLimit.螃蟹
+  const source7881Limit = limit?.['7881'] ?? defaultPlatformLimit['7881']
+  return `螃蟹 ${pxb7Limit} 条 / 7881 ${source7881Limit} 条`
 }
 
 function formatCurrency(value) {
@@ -152,6 +159,8 @@ export function App() {
     race: '全部',
     linkedAccount: '全部',
     minMemberDays: '',
+    pxb7Limit: '100',
+    source7881Limit: '100',
   }), [])
   const [filters, setFilters] = useState(defaultFilters)
   const [appliedFilters, setAppliedFilters] = useState(defaultFilters)
@@ -162,7 +171,7 @@ export function App() {
   const [sourcePagesFetched, setSourcePagesFetched] = useState(0)
   const [sourceStats, setSourceStats] = useState([])
   const [sourceWarnings, setSourceWarnings] = useState([])
-  const [platformLimit, setPlatformLimit] = useState(100)
+  const [platformLimit, setPlatformLimit] = useState(defaultPlatformLimit)
   const [sortConfig, setSortConfig] = useState(defaultSort)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(pageSizeOptions[0])
@@ -190,6 +199,8 @@ export function App() {
       })
       if (nextFilters.maxPrice) params.set('maxPrice', nextFilters.maxPrice)
       if (nextFilters.minMemberDays) params.set('minMemberDays', nextFilters.minMemberDays)
+      params.set('pxb7Limit', nextFilters.pxb7Limit || String(defaultPlatformLimit.螃蟹))
+      params.set('source7881Limit', nextFilters.source7881Limit || String(defaultPlatformLimit['7881']))
 
       const response = await fetch(`/api/listings?${params}`)
       const payload = await response.json()
@@ -204,7 +215,7 @@ export function App() {
       setSourcePagesFetched(payload.sourcePagesFetched)
       setSourceStats(payload.sources || [])
       setSourceWarnings(payload.warnings || [])
-      setPlatformLimit(payload.platformLimit || 100)
+      setPlatformLimit(payload.platformLimit || defaultPlatformLimit)
       setAppliedFilters(nextFilters)
       setCurrentPage(1)
       setExpandedRows(defaultExpandedRows(filteredItems, defaultSort))
@@ -296,7 +307,7 @@ export function App() {
         <div>
           <span className="section-kicker">公开售卖数据</span>
           <h2>快速比较角色价格、职业和账号详情</h2>
-          <p>查询只筛选当前已抓取的数据；重新抓取才访问螃蟹和 7881。每个平台每次最多保留 {platformLimit} 条。</p>
+          <p>查询只筛选当前已抓取的数据；重新抓取才访问螃蟹和 7881。当前抓取上限：{formatPlatformLimit(platformLimit)}。</p>
         </div>
         <div className="freshness-card">
           <StatusBadge loading={loading} error={error} />
@@ -384,6 +395,34 @@ export function App() {
             </div>
           </label>
 
+          <label className="field-group">
+            <span>螃蟹上限</span>
+            <div className="input-wrap">
+              <input
+                inputMode="numeric"
+                min="1"
+                type="number"
+                value={filters.pxb7Limit}
+                onChange={(event) => setFilters({ ...filters, pxb7Limit: event.target.value })}
+                placeholder="100"
+              />
+            </div>
+          </label>
+
+          <label className="field-group">
+            <span>7881上限</span>
+            <div className="input-wrap">
+              <input
+                inputMode="numeric"
+                min="1"
+                type="number"
+                value={filters.source7881Limit}
+                onChange={(event) => setFilters({ ...filters, source7881Limit: event.target.value })}
+                placeholder="100"
+              />
+            </div>
+          </label>
+
           <div className="filter-actions">
             <button className="query-button" type="submit" disabled={loading}>
               <MagnifyingGlass size={18} weight="bold" />
@@ -405,6 +444,7 @@ export function App() {
           <b>{appliedFilters.profession}</b>
           <b>连体号：{appliedFilters.linkedAccount}</b>
           {appliedFilters.minMemberDays && <b>会员 ≥ {appliedFilters.minMemberDays} 天</b>}
+          <b>下次抓取上限：螃蟹 {appliedFilters.pxb7Limit || defaultPlatformLimit.螃蟹} / 7881 {appliedFilters.source7881Limit || defaultPlatformLimit['7881']}</b>
           <b>来源：螃蟹 + 7881</b>
         </div>
       </form>
@@ -428,7 +468,7 @@ export function App() {
       )}
 
       <section className="summary-grid" aria-label="价格概览">
-        <article><span><Database size={18} /> 匹配账号</span><strong>{loading && !items.length ? '-' : items.length}</strong><small>已抓取 {allItems.length || '-'} 条；{sourceStats.length ? sourceStats.map((source) => `${source.source} ${source.itemCount}`).join(' / ') : `单平台上限 ${platformLimit} 条`}</small></article>
+        <article><span><Database size={18} /> 匹配账号</span><strong>{loading && !items.length ? '-' : items.length}</strong><small>已抓取 {allItems.length || '-'} 条；{sourceStats.length ? sourceStats.map((source) => `${source.source} ${source.itemCount}/${source.sourceLimit || '-'}`).join(' / ') : formatPlatformLimit(platformLimit)}</small></article>
         <article><span>最低价格</span><strong>{summary.lowest === null ? '-' : formatCurrency(summary.lowest)}</strong><small>当前筛选结果</small></article>
         <article><span>平均价格</span><strong>{summary.average === null ? '-' : formatCurrency(summary.average)}</strong><small>排序：{sortLabels[sortConfig.key]}{sortConfig.direction === 'asc' ? '升序' : '降序'}</small></article>
         <article><span>最高价格</span><strong>{summary.highest === null ? '-' : formatCurrency(summary.highest)}</strong><small>抓取 {sourcePagesFetched || '-'} 源页</small></article>

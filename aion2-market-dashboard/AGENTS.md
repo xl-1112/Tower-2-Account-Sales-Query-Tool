@@ -11,7 +11,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Match the supplied pxb7 filter screenshot: white surfaces, restrained gray borders, compact PingFang typography, and orange selection states.
 - Keep the dashboard desktop-first and responsive; preserve table readability with horizontal scrolling on narrow screens.
 - Use two interaction modes: `查询` filters the already fetched in-memory dataset only, while `重新抓取` fetches fresh data from source platforms.
-- To reduce rate-limit risk, each source platform returns at most 100 records per scrape. Keep this cap when adding new platforms.
+- Source scrape limits are user-configurable per platform. Default to 100 for `螃蟹` and 100 for `7881`; keep separate `pxb7Limit` and `source7881Limit` parameters when adding UI or API changes.
 - Default race is `全部`, so fresh scrapes include both 天族 and 魔族 unless the user selects a specific race.
 - Price, equipment, combat power, membership-day, published-time sorting, local filtering, website pagination, and page-size switching are local and must not trigger another scrape.
 - Page-size options are 10, 50, and 100 rows per page; switching page size returns to page 1.

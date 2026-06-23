@@ -95,6 +95,14 @@
       "dependencies": ["data-011"],
       "status": "completed",
       "evidence": "螃蟹 API 原始数据确认 important 含同职业4连号/6连号；normalizePxb7ApiListing 已合并接口标签参与解析。新增小号角色战力和数量提示回归测试。验证通过：npm test 14项、npm run build、node scripts/validate-aion2-data-probe.mjs；Cloud Function 入口 linkedAccount=4连号 返回84条，其中螃蟹39条且 labels=[4连号]。"
+    },
+    {
+      "id": "data-013",
+      "name": "双平台抓取上限自定义",
+      "description": "将固定每平台 100 条抓取上限改为用户可配置；前端分别提供螃蟹上限和 7881 上限输入，重新抓取时分别传入后端，后端按平台独立限制抓取数量。",
+      "dependencies": ["data-012"],
+      "status": "completed",
+      "evidence": "新增 pxb7Limit/source7881Limit 参数并贯通前端、Vite API、EdgeOne Function 和 scrapeListings。验证通过：npm test 15项、npm run build、node scripts/validate-aion2-data-probe.mjs；真实抓取 pxb7Limit=5/source7881Limit=7 返回螃蟹5条、7881 7条；Cloud Function pxb7Limit=3/source7881Limit=4 返回总计7条。"
     }
   ]
 }

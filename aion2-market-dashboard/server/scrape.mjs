@@ -7,8 +7,7 @@ const SOURCE_7881_URL = 'https://search.7881.com/G6212-100003-0-0-0.html?pageNum
 const GOODS_7881_API_URL = 'https://gw.7881.com/goods-service-api/api/goods/list'
 const PXB7_SOURCE_PAGE_SIZE = 16
 const SOURCE_7881_PAGE_SIZE = 30
-const MAX_ITEMS_PER_SOURCE = 100
-const PXB7_MAX_PAGES = Math.ceil(MAX_ITEMS_PER_SOURCE / PXB7_SOURCE_PAGE_SIZE)
+const DEFAULT_ITEMS_PER_SOURCE = 100
 const PXB7_SOURCE_NAME = '螃蟹'
 const SOURCE_7881_NAME = '7881'
 const SOURCE_7881_SIGN_SEED = '5c2c538a3937c6db2d04bce3d03bbe88bl'.split('').reverse().join('')
@@ -80,6 +79,11 @@ function collectTextFragments(value) {
 
 function joinTextFragments(...values) {
   return values.flatMap(collectTextFragments).join(' ')
+}
+
+function normalizeSourceLimit(value) {
+  const limit = Math.floor(Number(value))
+  return Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_ITEMS_PER_SOURCE
 }
 
 function parseSmallAccountCountHint(text = '') {
@@ -343,6 +347,8 @@ export function normalizeFilters(filters = {}) {
     race: filters.race || ALL_OPTION,
     linkedAccount: filters.linkedAccount || ALL_OPTION,
     minMemberDays: Number(filters.minMemberDays) || 0,
+    pxb7Limit: normalizeSourceLimit(filters.pxb7Limit),
+    source7881Limit: normalizeSourceLimit(filters.source7881Limit),
   }
 }
 
@@ -410,13 +416,14 @@ async function fetchPxb7Page(pageIndex, headers) {
   return data.data || { list: [] }
 }
 
-async function scrapePxb7Listings() {
+async function scrapePxb7Listings(limit = DEFAULT_ITEMS_PER_SOURCE) {
   const items = []
   const seen = new Set()
   const headers = pxb7Headers()
   let pagesFetched = 0
+  const maxPages = Math.ceil(limit / PXB7_SOURCE_PAGE_SIZE)
 
-  for (let pageIndex = 1; pageIndex <= PXB7_MAX_PAGES && items.length < MAX_ITEMS_PER_SOURCE; pageIndex += 1) {
+  for (let pageIndex = 1; pageIndex <= maxPages && items.length < limit; pageIndex += 1) {
     const pageData = await fetchPxb7Page(pageIndex, headers)
     pagesFetched += 1
     const list = pageData.list || []
@@ -426,7 +433,7 @@ async function scrapePxb7Listings() {
       if (!item || seen.has(item.productId)) continue
       seen.add(item.productId)
       items.push(item)
-      if (items.length >= MAX_ITEMS_PER_SOURCE) break
+      if (items.length >= limit) break
     }
 
     if (list.length < PXB7_SOURCE_PAGE_SIZE) break
@@ -437,6 +444,7 @@ async function scrapePxb7Listings() {
     source: PXB7_SOURCE_NAME,
     sourcePageSize: PXB7_SOURCE_PAGE_SIZE,
     sourcePagesFetched: pagesFetched,
+    sourceLimit: limit,
     items,
   }
 }
@@ -487,20 +495,20 @@ async function fetch7881Page(filters, pageNum) {
   return data.body || { results: [], pages: 0 }
 }
 
-async function scrape7881Listings(filters) {
+async function scrape7881Listings(filters, limit = DEFAULT_ITEMS_PER_SOURCE) {
   const items = []
   let pagesFetched = 0
   let totalPages = 1
 
-  for (let pageNum = 1; pageNum <= totalPages && items.length < MAX_ITEMS_PER_SOURCE; pageNum += 1) {
+  for (let pageNum = 1; pageNum <= totalPages && items.length < limit; pageNum += 1) {
     const pageData = await fetch7881Page(filters, pageNum)
     pagesFetched += 1
-    totalPages = Math.min(pageData.pages || 1, Math.ceil(MAX_ITEMS_PER_SOURCE / SOURCE_7881_PAGE_SIZE))
+    totalPages = Math.min(pageData.pages || 1, Math.ceil(limit / SOURCE_7881_PAGE_SIZE))
 
     for (const raw of pageData.results || []) {
       const item = normalize7881Listing(raw)
       if (item) items.push(item)
-      if (items.length >= MAX_ITEMS_PER_SOURCE) break
+      if (items.length >= limit) break
     }
   }
 
@@ -509,6 +517,7 @@ async function scrape7881Listings(filters) {
     source: SOURCE_7881_NAME,
     sourcePageSize: SOURCE_7881_PAGE_SIZE,
     sourcePagesFetched: pagesFetched,
+    sourceLimit: limit,
     items,
   }
 }
@@ -518,13 +527,13 @@ async function runScrape(filters = {}) {
   const sourceResults = []
   const warnings = []
 
-  const pxb7Result = await scrapePxb7Listings(normalizedFilters).catch((error) => {
+  const pxb7Result = await scrapePxb7Listings(normalizedFilters.pxb7Limit).catch((error) => {
     warnings.push({ source: PXB7_SOURCE_NAME, message: error.message || '螃蟹抓取失败' })
     return null
   })
   if (pxb7Result) sourceResults.push(pxb7Result)
 
-  const source7881Result = await scrape7881Listings(normalizedFilters).catch((error) => {
+  const source7881Result = await scrape7881Listings(normalizedFilters, normalizedFilters.source7881Limit).catch((error) => {
     warnings.push({ source: SOURCE_7881_NAME, message: error.message || '7881 抓取失败' })
     return null
   })
@@ -543,7 +552,10 @@ async function runScrape(filters = {}) {
     observedAt: new Date().toISOString(),
     sourcePageSize: null,
     sourcePagesFetched: sourceResults.reduce((sum, result) => sum + result.sourcePagesFetched, 0),
-    platformLimit: MAX_ITEMS_PER_SOURCE,
+    platformLimit: {
+      [PXB7_SOURCE_NAME]: normalizedFilters.pxb7Limit,
+      [SOURCE_7881_NAME]: normalizedFilters.source7881Limit,
+    },
     totalFetched: fetchedItems.length,
     sources: sourceResults.map((result) => ({
       source: result.source,
@@ -551,6 +563,7 @@ async function runScrape(filters = {}) {
       sourcePagesFetched: result.sourcePagesFetched,
       itemCount: result.items.length,
       sourcePageSize: result.sourcePageSize,
+      sourceLimit: result.sourceLimit,
     })),
     warnings,
     items,

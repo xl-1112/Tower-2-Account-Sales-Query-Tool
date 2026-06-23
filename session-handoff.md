@@ -33,6 +33,7 @@
 - 已支持从卖家说/标题中推断连体号：显式“4连号/连体号-5连号”直接识别；“小号158杀+181护+154弓”按主号+3个小号识别为 4 连号。
 - 已修正会员天数识别：只从明确会员/战令/通行证上下文和会员到期日期解析，避免把深渊点、战力值、标题数字或天族字段误判为会员天数。
 - 已接入螃蟹列表 API 的连体号标签：`important` 中的 `同职业4连号/6连号` 会优先映射到 `linkedAccountLabel`；无接口标签时继续从卖家说小号战力描述推断。
+- 已将抓取数量上限改为用户分别配置：前端提供 `螃蟹上限` 和 `7881上限`，重新抓取时透传到本地 API/EdgeOne Function，后端按平台独立限制。
 
 ## Verification
 
@@ -42,7 +43,7 @@
 | 完整启动检查 | `bash init.sh` | 所有检查通过 |
 | AI 运行时 | 微信开发者工具 Nightly 最新版 | SKILL 可加载、接口可调用、卡片可展示 |
 | 售卖数据探针 | `node scripts/validate-aion2-data-probe.mjs` | `Aion2 listing data probe validation passed` |
-| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 14 tests passed |
+| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 15 tests passed |
 | 查询网站生产构建 | `cd aion2-market-dashboard && npm run build` | Vite build passed |
 | 查询网站真实抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 81.9 秒返回 100 条、7 个来源页、来源=螃蟹、首条含 `4连号` 子集 |
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
@@ -52,6 +53,7 @@
 | 连体号筛选验证 | `npm test` + Cloud Function fixture/live call | 10 项测试通过；`linkedAccount=4连号` 实测返回 47 条且结果标签均为 `4连号` |
 | 会员天数修正验证 | live scrape anomaly scan | 真实抓取 200 条后 `membershipDays > 10000` 异常为 0 条 |
 | 螃蟹连体号修正验证 | Cloud Function live call | `linkedAccount=4连号` 返回 84 条，其中螃蟹 39 条且结果标签均为 `4连号` |
+| 双平台抓取上限验证 | live scrape + Cloud Function call | `pxb7Limit=5&source7881Limit=7` 返回螃蟹 5 条、7881 7 条；Function `pxb7Limit=3&source7881Limit=4` 返回总计 7 条 |
 
 ## Existing User Changes
 
@@ -80,7 +82,7 @@
 - 高风险设备控制必须先确认审批和审计方案。
 - 螃蟹页面 HTML 仍会返回反自动化挑战；当前线上实现改用其公开 JSON 列表接口，不读取 Cookie、不绕过验证码。详情页“卖家说”暂以列表标题作为展开内容，后续若发现稳定详情 API 再补全。
 - 7881 使用公开搜索页同源接口；接口需要 `lb-timestamp` 和 `lb-sign`，签名逻辑来自页面脚本 `lb-cry.js`。
-- 当前重新抓取每个来源最多加载前 100 条，默认种族为“全部”以包含天族和魔族；不定时抓取、不保存历史；密集请求可能触发站点临时限流，禁止绕过。查询按钮、排序、翻页和每页条数切换只筛选或重排本地已抓取数据。
+- 当前重新抓取每个来源的数量由用户分别填写，默认螃蟹 100 条、7881 100 条；默认种族为“全部”以包含天族和魔族；不定时抓取、不保存历史；密集请求可能触发站点临时限流，禁止绕过。查询按钮、排序、翻页和每页条数切换只筛选或重排本地已抓取数据。
 
 ## Next Session Startup
 
