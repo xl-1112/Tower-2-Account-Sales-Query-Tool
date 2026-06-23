@@ -103,6 +103,14 @@
       "dependencies": ["data-012"],
       "status": "completed",
       "evidence": "新增 pxb7Limit/source7881Limit 参数并贯通前端、Vite API、EdgeOne Function 和 scrapeListings。验证通过：npm test 15项、npm run build、node scripts/validate-aion2-data-probe.mjs；真实抓取 pxb7Limit=5/source7881Limit=7 返回螃蟹5条、7881 7条；Cloud Function pxb7Limit=3/source7881Limit=4 返回总计7条。"
+    },
+    {
+      "id": "data-014",
+      "name": "永恒之塔2战斗力本地筛选",
+      "description": "查询条件新增战斗力下限输入，仅允许数字；点击查询时基于当前已抓取数据按 combatPower 数值部分本地筛选，不触发重新抓取。",
+      "dependencies": ["data-013"],
+      "status": "completed",
+      "evidence": "前端新增 minCombatPower 字段和“战斗力 ≥”输入，onChange 过滤非数字，filterRows 按战斗力数值下限过滤。验证通过：npm test 15项、npm run build、node scripts/validate-aion2-data-probe.mjs。"
     }
   ]
 }

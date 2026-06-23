@@ -113,14 +113,17 @@ function filterRows(rows, activeFilters) {
   const minPrice = Number(activeFilters.minPrice || 0)
   const maxPrice = activeFilters.maxPrice ? Number(activeFilters.maxPrice) : Number.POSITIVE_INFINITY
   const minMemberDays = Number(activeFilters.minMemberDays || 0)
+  const minCombatPower = Number(activeFilters.minCombatPower || 0)
 
   return rows.filter((item) => {
     const priceMatches = item.priceYuan >= minPrice && item.priceYuan <= maxPrice
+    const combatPowerValue = numberValue(item.combatPower) || 0
+    const combatMatches = minCombatPower <= 0 || combatPowerValue >= minCombatPower
     const professionMatches = activeFilters.profession === '全部' || item.profession === activeFilters.profession
     const raceMatches = activeFilters.race === '全部' || item.race === activeFilters.race
     const linkedMatches = activeFilters.linkedAccount === '全部' || item.linkedAccountLabel === activeFilters.linkedAccount
     const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
-    return priceMatches && professionMatches && raceMatches && linkedMatches && memberMatches
+    return priceMatches && combatMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
 }
 
@@ -158,6 +161,7 @@ export function App() {
     profession: '全部',
     race: '全部',
     linkedAccount: '全部',
+    minCombatPower: '',
     minMemberDays: '',
     pxb7Limit: '100',
     source7881Limit: '100',
@@ -382,6 +386,21 @@ export function App() {
           </label>
 
           <label className="field-group">
+            <span>战斗力 ≥</span>
+            <div className="input-wrap">
+              <input
+                inputMode="numeric"
+                min="0"
+                pattern="[0-9]*"
+                type="number"
+                value={filters.minCombatPower}
+                onChange={(event) => setFilters({ ...filters, minCombatPower: event.target.value.replace(/\D/g, '') })}
+                placeholder="不限"
+              />
+            </div>
+          </label>
+
+          <label className="field-group">
             <span>会员天数 ≥</span>
             <div className="input-wrap">
               <input
@@ -443,6 +462,7 @@ export function App() {
           {appliedFilters.maxPrice && <b>价格 ≤ {appliedFilters.maxPrice}</b>}
           <b>{appliedFilters.profession}</b>
           <b>连体号：{appliedFilters.linkedAccount}</b>
+          {appliedFilters.minCombatPower && <b>战斗力 ≥ {appliedFilters.minCombatPower}K</b>}
           {appliedFilters.minMemberDays && <b>会员 ≥ {appliedFilters.minMemberDays} 天</b>}
           <b>下次抓取上限：螃蟹 {appliedFilters.pxb7Limit || defaultPlatformLimit.螃蟹} / 7881 {appliedFilters.source7881Limit || defaultPlatformLimit['7881']}</b>
           <b>来源：螃蟹 + 7881</b>
