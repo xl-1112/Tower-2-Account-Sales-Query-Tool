@@ -490,7 +490,19 @@ async function fetch7881Page(filters, pageNum) {
     },
     body: payload,
   })
-  const data = await response.json()
+  const contentType = response.headers.get('content-type') || ''
+  const text = await response.text()
+  if (!contentType.includes('application/json')) {
+    throw new Error(`7881 接口未返回 JSON：HTTP ${response.status} ${text.slice(0, 80)}`)
+  }
+
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error(`7881 接口 JSON 解析失败：HTTP ${response.status} ${text.slice(0, 80)}`)
+  }
+
   if (data.code !== 0) throw new Error(`7881 接口返回异常：${data.msg || data.code}`)
   return data.body || { results: [], pages: 0 }
 }

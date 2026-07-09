@@ -12,6 +12,7 @@ import {
   parseListings,
   parseMembershipDays,
   parseSellerRemark,
+  scrapeListings,
 } from './scrape.mjs'
 
 test('parseListings extracts the requested marketplace fields from rendered HTML', () => {
@@ -229,4 +230,45 @@ test('normalizeFilters keeps independent user-provided source limits', () => {
     pxb7Limit: 100,
     source7881Limit: 100,
   })
+})
+
+test('scrapeListings reports readable 7881 HTML responses and keeps other sources', async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url) => {
+    const requestUrl = String(url)
+    if (requestUrl.includes('api-pc.pxb7.com')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          list: [{
+            productId: '2231636572488668783',
+            price: 33000,
+            showTitle: '【希塔尼耶】45级天族女护法星，装等3715，战斗力346.59K',
+            attrNameList: ['天族', '希塔尼耶', 'NC邮箱账号', '护法星', '女'],
+            shelveUpTimeText: '2分钟内发布',
+          }],
+        },
+      }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+    if (requestUrl.includes('gw.7881.com')) {
+      return new Response('<html>blocked</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      })
+    }
+    throw new Error(`Unexpected fetch URL: ${requestUrl}`)
+  }
+
+  try {
+    const result = await scrapeListings({ pxb7Limit: '1', source7881Limit: '1' })
+    assert.equal(result.items.length, 1)
+    assert.equal(result.warnings.length, 1)
+    assert.equal(result.warnings[0].source, '7881')
+    assert.match(result.warnings[0].message, /7881 接口未返回 JSON：HTTP 200/)
+    assert.doesNotMatch(result.warnings[0].message, /Unexpected token/)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
