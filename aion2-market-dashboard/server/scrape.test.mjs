@@ -141,6 +141,8 @@ test('parseLinkedAccountCount infers linked accounts from counted small-account 
 test('parseMembershipDays avoids distant numeric fields and reads explicit member context', () => {
   assert.equal(parseMembershipDays('深渊点:15280 天族武器: 閃耀短劍 周一刚刚充的会员'), null)
   assert.equal(parseMembershipDays('深渊点:200000 天族武器: 盧德萊心臟 没会员 号上还有3亿基纳'), 0)
+  assert.equal(parseMembershipDays('会员-，4连号'), 0)
+  assert.equal(parseMembershipDays('会员0天，4连号'), 0)
   assert.equal(parseMembershipDays('会员还有13天，4连号'), 13)
   assert.equal(parseMembershipDays('11111111天 梅斯蘭泰蓮 天8'), null)
 })
@@ -212,6 +214,20 @@ test('filterListings applies local price, race, profession, membership, and link
     minMemberDays: 30,
     linkedAccount: '5连号',
   }), [rows[2]])
+})
+
+test('filterListings supports multiple profession, race and linked-account selections', () => {
+  const rows = [
+    { priceYuan: 600, race: '天族', profession: '弓星', membershipDays: 10, linkedAccountLabel: '4连号' },
+    { priceYuan: 700, race: '魔族', profession: '弓星', membershipDays: 0, linkedAccountLabel: '6连号' },
+    { priceYuan: 900, race: '魔族', profession: '魔道星', membershipDays: 60, linkedAccountLabel: '5连号' },
+  ]
+
+  assert.deepEqual(filterListings(rows, {
+    profession: ['弓星', '魔道星'],
+    race: ['天族', '魔族'],
+    linkedAccount: '4连号,5连号',
+  }), [rows[0], rows[2]])
 })
 
 test('normalizeFilters keeps independent user-provided source limits', () => {

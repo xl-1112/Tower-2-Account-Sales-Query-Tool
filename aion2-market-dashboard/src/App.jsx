@@ -10,9 +10,9 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 
-const professions = ['全部', '剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
-const races = ['全部', '天族', '魔族']
-const linkedAccountOptions = ['全部', '4连号', '5连号', '6连号', '7连号', '8连号']
+const professions = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
+const races = ['天族', '魔族']
+const linkedAccountOptions = ['4连号', '5连号', '6连号', '7连号', '8连号']
 const pageSizeOptions = [10, 50, 100]
 const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
 
@@ -109,19 +109,33 @@ function sortRows(rows, sortConfig) {
   })
 }
 
+function selectedOptions(value) {
+  if (Array.isArray(value)) return value
+  if (!value || value === '全部') return []
+  return String(value).split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function optionLabel(selected, allOptions) {
+  if (!selected.length || selected.length === allOptions.length) return '全部'
+  return selected.join('、')
+}
+
 function filterRows(rows, activeFilters) {
   const minPrice = Number(activeFilters.minPrice || 0)
   const maxPrice = activeFilters.maxPrice ? Number(activeFilters.maxPrice) : Number.POSITIVE_INFINITY
   const minMemberDays = Number(activeFilters.minMemberDays || 0)
   const minCombatPower = Number(activeFilters.minCombatPower || 0)
+  const selectedRaces = selectedOptions(activeFilters.race)
+  const selectedLinkedAccounts = selectedOptions(activeFilters.linkedAccount)
+  const selectedProfessions = selectedOptions(activeFilters.profession)
 
   return rows.filter((item) => {
     const priceMatches = item.priceYuan >= minPrice && item.priceYuan <= maxPrice
     const combatPowerValue = numberValue(item.combatPower) || 0
     const combatMatches = minCombatPower <= 0 || combatPowerValue >= minCombatPower
-    const professionMatches = activeFilters.profession === '全部' || item.profession === activeFilters.profession
-    const raceMatches = activeFilters.race === '全部' || item.race === activeFilters.race
-    const linkedMatches = activeFilters.linkedAccount === '全部' || item.linkedAccountLabel === activeFilters.linkedAccount
+    const professionMatches = !selectedProfessions.length || selectedProfessions.includes(item.profession)
+    const raceMatches = !selectedRaces.length || selectedRaces.includes(item.race)
+    const linkedMatches = !selectedLinkedAccounts.length || selectedLinkedAccounts.includes(item.linkedAccountLabel)
     const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
     return priceMatches && combatMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
@@ -154,13 +168,46 @@ function SortHeader({ label, name, sortConfig, onSort }) {
   )
 }
 
+function MultiSelectDropdown({ label, options, selected, onChange, keepOne = false }) {
+  const current = selectedOptions(selected)
+  const toggleOption = (option) => {
+    const next = current.includes(option)
+      ? current.filter((item) => item !== option)
+      : [...current, option]
+    onChange(keepOne && !next.length ? [...options] : next)
+  }
+
+  return (
+    <div className="field-group">
+      <span>{label}</span>
+      <details className="multi-select">
+        <summary>
+          <span>{optionLabel(current, options)}</span>
+        </summary>
+        <div className="multi-select-menu">
+          {options.map((option) => (
+            <label className="multi-select-option" key={option}>
+              <input
+                type="checkbox"
+                checked={current.includes(option)}
+                onChange={() => toggleOption(option)}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+        </div>
+      </details>
+    </div>
+  )
+}
+
 export function App() {
   const defaultFilters = useMemo(() => ({
     minPrice: '500',
     maxPrice: '',
-    profession: '全部',
-    race: '全部',
-    linkedAccount: '全部',
+    profession: [...professions],
+    race: [...races],
+    linkedAccount: [],
     minCombatPower: '',
     minMemberDays: '',
     pxb7Limit: '100',
@@ -197,10 +244,10 @@ export function App() {
     try {
       const params = new URLSearchParams({
         minPrice: nextFilters.minPrice || '0',
-        profession: nextFilters.profession,
-        race: nextFilters.race,
-        linkedAccount: nextFilters.linkedAccount,
       })
+      params.set('profession', selectedOptions(nextFilters.profession).join(',') || '全部')
+      params.set('race', selectedOptions(nextFilters.race).join(',') || '全部')
+      params.set('linkedAccount', selectedOptions(nextFilters.linkedAccount).join(',') || '全部')
       if (nextFilters.maxPrice) params.set('maxPrice', nextFilters.maxPrice)
       if (nextFilters.minMemberDays) params.set('minMemberDays', nextFilters.minMemberDays)
       params.set('pxb7Limit', nextFilters.pxb7Limit || String(defaultPlatformLimit.螃蟹))
@@ -364,26 +411,28 @@ export function App() {
             </div>
           </label>
 
-          <label className="field-group">
-            <span>种族</span>
-            <select value={filters.race} onChange={(event) => setFilters({ ...filters, race: event.target.value })}>
-              {races.map((race) => <option key={race}>{race}</option>)}
-            </select>
-          </label>
+          <MultiSelectDropdown
+            label="种族"
+            options={races}
+            selected={filters.race}
+            keepOne
+            onChange={(race) => setFilters({ ...filters, race })}
+          />
 
-          <label className="field-group">
-            <span>职业</span>
-            <select value={filters.profession} onChange={(event) => setFilters({ ...filters, profession: event.target.value })}>
-              {professions.map((profession) => <option key={profession}>{profession}</option>)}
-            </select>
-          </label>
+          <MultiSelectDropdown
+            label="职业"
+            options={professions}
+            selected={filters.profession}
+            keepOne
+            onChange={(profession) => setFilters({ ...filters, profession })}
+          />
 
-          <label className="field-group">
-            <span>连体号</span>
-            <select value={filters.linkedAccount} onChange={(event) => setFilters({ ...filters, linkedAccount: event.target.value })}>
-              {linkedAccountOptions.map((option) => <option key={option}>{option}</option>)}
-            </select>
-          </label>
+          <MultiSelectDropdown
+            label="连体号"
+            options={linkedAccountOptions}
+            selected={filters.linkedAccount}
+            onChange={(linkedAccount) => setFilters({ ...filters, linkedAccount })}
+          />
 
           <label className="field-group">
             <span>战斗力 ≥</span>
@@ -457,11 +506,11 @@ export function App() {
         <div className="active-filter-row">
           <span>当前筛选</span>
           <b>账号</b>
-          <b>{appliedFilters.race}</b>
+          <b>{optionLabel(selectedOptions(appliedFilters.race), races)}</b>
           <b>价格 ≥ {appliedFilters.minPrice || 0}</b>
           {appliedFilters.maxPrice && <b>价格 ≤ {appliedFilters.maxPrice}</b>}
-          <b>{appliedFilters.profession}</b>
-          <b>连体号：{appliedFilters.linkedAccount}</b>
+          <b>{optionLabel(selectedOptions(appliedFilters.profession), professions)}</b>
+          <b>连体号：{optionLabel(selectedOptions(appliedFilters.linkedAccount), linkedAccountOptions)}</b>
           {appliedFilters.minCombatPower && <b>战斗力 ≥ {appliedFilters.minCombatPower}K</b>}
           {appliedFilters.minMemberDays && <b>会员 ≥ {appliedFilters.minMemberDays} 天</b>}
           <b>下次抓取上限：螃蟹 {appliedFilters.pxb7Limit || defaultPlatformLimit.螃蟹} / 7881 {appliedFilters.source7881Limit || defaultPlatformLimit['7881']}</b>

@@ -12,6 +12,9 @@ const PXB7_SOURCE_NAME = '螃蟹'
 const SOURCE_7881_NAME = '7881'
 const SOURCE_7881_SIGN_SEED = '5c2c538a3937c6db2d04bce3d03bbe88bl'.split('').reverse().join('')
 const ALL_OPTION = '全部'
+const PROFESSION_OPTIONS = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
+const RACE_OPTIONS = ['天族', '魔族']
+const LINKED_ACCOUNT_OPTIONS = ['4连号', '5连号', '6连号', '7连号', '8连号']
 
 let scrapeQueue = Promise.resolve()
 
@@ -86,6 +89,19 @@ function normalizeSourceLimit(value) {
   return Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_ITEMS_PER_SOURCE
 }
 
+function normalizeMultiOption(value, options) {
+  const rawValues = Array.isArray(value) ? value : [value]
+  const selected = rawValues
+    .flatMap((item) => String(item || '').split(','))
+    .map((item) => item.trim())
+    .filter((item) => item && item !== ALL_OPTION && options.includes(item))
+  return [...new Set(selected)]
+}
+
+function multiOptionMatches(selectedValues, value) {
+  return !selectedValues.length || selectedValues.includes(value)
+}
+
 function parseSmallAccountCountHint(text = '') {
   const normalized = String(text).replace(/\s+/g, '')
   const patterns = [
@@ -105,6 +121,7 @@ function parseSmallAccountCountHint(text = '') {
 export function parseMembershipDays(text = '') {
   const normalized = String(text).replace(/\s+/g, '')
   if (/(?:无|没|没有)会员/.test(normalized)) return 0
+  if (/(?:会员|通行证|战令|会员战令)[:：-]?(?:-|0天?)/.test(normalized)) return 0
 
   const dayPatterns = [
     /(?:会员|通行证|战令|会员战令)[:：]?[^，,。；;】)]{0,24}?(?:还剩|还有|剩余)(\d{1,4})天/,
@@ -343,9 +360,9 @@ export function normalizeFilters(filters = {}) {
     maxPrice: filters.maxPrice === undefined || filters.maxPrice === null || filters.maxPrice === ''
       ? Number.POSITIVE_INFINITY
       : Number(filters.maxPrice),
-    profession: filters.profession || ALL_OPTION,
-    race: filters.race || ALL_OPTION,
-    linkedAccount: filters.linkedAccount || ALL_OPTION,
+    profession: normalizeMultiOption(filters.profession, PROFESSION_OPTIONS),
+    race: normalizeMultiOption(filters.race, RACE_OPTIONS),
+    linkedAccount: normalizeMultiOption(filters.linkedAccount, LINKED_ACCOUNT_OPTIONS),
     minMemberDays: Number(filters.minMemberDays) || 0,
     pxb7Limit: normalizeSourceLimit(filters.pxb7Limit),
     source7881Limit: normalizeSourceLimit(filters.source7881Limit),
@@ -356,9 +373,9 @@ export function filterListings(items, filters = {}) {
   const normalizedFilters = normalizeFilters(filters)
   return items.filter((item) => {
     const priceMatches = item.priceYuan >= normalizedFilters.minPrice && item.priceYuan <= normalizedFilters.maxPrice
-    const professionMatches = normalizedFilters.profession === ALL_OPTION || item.profession === normalizedFilters.profession
-    const raceMatches = normalizedFilters.race === ALL_OPTION || item.race === normalizedFilters.race
-    const linkedMatches = normalizedFilters.linkedAccount === ALL_OPTION || item.linkedAccountLabel === normalizedFilters.linkedAccount
+    const professionMatches = multiOptionMatches(normalizedFilters.profession, item.profession)
+    const raceMatches = multiOptionMatches(normalizedFilters.race, item.race)
+    const linkedMatches = multiOptionMatches(normalizedFilters.linkedAccount, item.linkedAccountLabel)
     const memberMatches = normalizedFilters.minMemberDays <= 0 || (item.membershipDays || 0) >= normalizedFilters.minMemberDays
     return priceMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
@@ -462,14 +479,14 @@ async function fetch7881Page(filters, pageNum) {
     pageSize: SOURCE_7881_PAGE_SIZE,
   }
 
-  if (filters.race === '天族') body.groupId = 'G6212P001'
-  if (filters.race === '魔族') body.groupId = 'G6212P002'
+  if (filters.race.length === 1 && filters.race[0] === '天族') body.groupId = 'G6212P001'
+  if (filters.race.length === 1 && filters.race[0] === '魔族') body.groupId = 'G6212P002'
   if (filters.minPrice > 0) body.minPrice = filters.minPrice
   if (Number.isFinite(filters.maxPrice)) body.maxPrice = filters.maxPrice
-  if (filters.profession !== ALL_OPTION) {
+  if (filters.profession.length) {
     body.extendAttrList.push({
       eid: '398298',
-      evs: [filters.profession],
+      evs: filters.profession,
       selectOption: '2',
       minCnt: 1,
     })

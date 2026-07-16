@@ -12,14 +12,19 @@ function jsonResponse(body, status = 200) {
   })
 }
 
+function readSearchParam(url, name) {
+  const values = url.searchParams.getAll(name)
+  return values.length > 1 ? values : values[0] || ''
+}
+
 function readFilters(request) {
   const url = new URL(request.url)
   return {
     minPrice: Number(url.searchParams.get('minPrice') || 0),
     maxPrice: url.searchParams.get('maxPrice') || '',
-    profession: url.searchParams.get('profession') || '全部',
-    race: url.searchParams.get('race') || '全部',
-    linkedAccount: url.searchParams.get('linkedAccount') || '全部',
+    profession: readSearchParam(url, 'profession') || '全部',
+    race: readSearchParam(url, 'race') || '全部',
+    linkedAccount: readSearchParam(url, 'linkedAccount') || '全部',
     minMemberDays: Number(url.searchParams.get('minMemberDays') || 0),
     pxb7Limit: url.searchParams.get('pxb7Limit') || '',
     source7881Limit: url.searchParams.get('source7881Limit') || '',

@@ -2,6 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { scrapeListings } from './server/scrape.mjs'
 
+function readSearchParam(url, name) {
+  const values = url.searchParams.getAll(name)
+  return values.length > 1 ? values : values[0] || ''
+}
+
 function listingsApi() {
   return async (req, res, next) => {
     if (!req.url?.startsWith('/api/listings')) return next()
@@ -13,9 +18,9 @@ function listingsApi() {
       const result = await scrapeListings({
         minPrice: Number(url.searchParams.get('minPrice') || 0),
         maxPrice: url.searchParams.get('maxPrice') || '',
-        profession: url.searchParams.get('profession') || '全部',
-        race: url.searchParams.get('race') || '全部',
-        linkedAccount: url.searchParams.get('linkedAccount') || '全部',
+        profession: readSearchParam(url, 'profession') || '全部',
+        race: readSearchParam(url, 'race') || '全部',
+        linkedAccount: readSearchParam(url, 'linkedAccount') || '全部',
         minMemberDays: Number(url.searchParams.get('minMemberDays') || 0),
         pxb7Limit: url.searchParams.get('pxb7Limit') || '',
         source7881Limit: url.searchParams.get('source7881Limit') || '',
