@@ -125,6 +125,7 @@ function filterRows(rows, activeFilters) {
   const maxPrice = activeFilters.maxPrice ? Number(activeFilters.maxPrice) : Number.POSITIVE_INFINITY
   const minMemberDays = Number(activeFilters.minMemberDays || 0)
   const minCombatPower = Number(activeFilters.minCombatPower || 0)
+  const characterLevel = Number(activeFilters.characterLevel || 0)
   const selectedRaces = selectedOptions(activeFilters.race)
   const selectedLinkedAccounts = selectedOptions(activeFilters.linkedAccount)
   const selectedProfessions = selectedOptions(activeFilters.profession)
@@ -133,11 +134,12 @@ function filterRows(rows, activeFilters) {
     const priceMatches = item.priceYuan >= minPrice && item.priceYuan <= maxPrice
     const combatPowerValue = numberValue(item.combatPower) || 0
     const combatMatches = minCombatPower <= 0 || combatPowerValue >= minCombatPower
+    const levelMatches = characterLevel <= 0 || item.maxCharacterLevel === characterLevel
     const professionMatches = !selectedProfessions.length || selectedProfessions.includes(item.profession)
     const raceMatches = !selectedRaces.length || selectedRaces.includes(item.race)
     const linkedMatches = !selectedLinkedAccounts.length || selectedLinkedAccounts.includes(item.linkedAccountLabel)
     const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
-    return priceMatches && combatMatches && professionMatches && raceMatches && linkedMatches && memberMatches
+    return priceMatches && combatMatches && levelMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
 }
 
@@ -209,6 +211,7 @@ export function App() {
     race: [...races],
     linkedAccount: [],
     minCombatPower: '',
+    characterLevel: '',
     minMemberDays: '',
     pxb7Limit: '100',
     source7881Limit: '100',
@@ -464,6 +467,21 @@ export function App() {
           </label>
 
           <label className="field-group">
+            <span>等级</span>
+            <div className="input-wrap">
+              <input
+                inputMode="numeric"
+                min="0"
+                pattern="[0-9]*"
+                type="number"
+                value={filters.characterLevel}
+                onChange={(event) => setFilters({ ...filters, characterLevel: event.target.value.replace(/\D/g, '') })}
+                placeholder="不限"
+              />
+            </div>
+          </label>
+
+          <label className="field-group">
             <span>螃蟹上限</span>
             <div className="input-wrap">
               <input
@@ -512,6 +530,7 @@ export function App() {
           <b>{optionLabel(selectedOptions(appliedFilters.profession), professions)}</b>
           <b>连体号：{optionLabel(selectedOptions(appliedFilters.linkedAccount), linkedAccountOptions)}</b>
           {appliedFilters.minCombatPower && <b>战斗力 ≥ {appliedFilters.minCombatPower}K</b>}
+          {appliedFilters.characterLevel && <b>等级 = {appliedFilters.characterLevel}</b>}
           {appliedFilters.minMemberDays && <b>会员 ≥ {appliedFilters.minMemberDays} 天</b>}
           <b>下次抓取上限：螃蟹 {appliedFilters.pxb7Limit || defaultPlatformLimit.螃蟹} / 7881 {appliedFilters.source7881Limit || defaultPlatformLimit['7881']}</b>
           <b>来源：螃蟹 + 7881</b>

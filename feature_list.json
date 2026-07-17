@@ -111,6 +111,14 @@
       "dependencies": ["data-013"],
       "status": "completed",
       "evidence": "前端新增 minCombatPower 字段和“战斗力 ≥”输入，onChange 过滤非数字，filterRows 按战斗力数值下限过滤。验证通过：npm test 15项、npm run build、node scripts/validate-aion2-data-probe.mjs。"
+    },
+    {
+      "id": "data-015",
+      "name": "永恒之塔2最高角色等级本地筛选",
+      "description": "从卖家说或来源标题中的“最高角色等级:50”类明确字段解析 maxCharacterLevel；查询条件新增仅允许数字的等级输入，并基于当前已抓取数据精确匹配等级。",
+      "dependencies": ["data-014"],
+      "status": "completed",
+      "evidence": "新增 parseMaxCharacterLevel，覆盖繁简体、常见分隔符和非明确等级文本；修复空格被移除后把“最高角色等级:49 4连号”误解析为 494、把 50 级连号误解析为 503～508 的问题。前端新增“等级”数字输入并按 maxCharacterLevel 精确匹配。验证通过：npm test 18项、npm run build、node scripts/validate-aion2-data-probe.mjs；真实抓取 200 条后 50 级从错误的 9 条恢复为 93 条，三位异常等级为 0。根目录微信 AI 校验仍受既有 app.json/page-meta.json/project.config.json 缺失阻塞。"
     }
   ]
 }

@@ -35,6 +35,8 @@
 - 已接入螃蟹列表 API 的连体号标签：`important` 中的 `同职业4连号/6连号` 会优先映射到 `linkedAccountLabel`；无接口标签时继续从卖家说小号战力描述推断。
 - 已将抓取数量上限改为用户分别配置：前端提供 `螃蟹上限` 和 `7881上限`，重新抓取时透传到本地 API/EdgeOne Function，后端按平台独立限制。
 - 已新增战斗力本地筛选：前端提供 `战斗力 ≥` 数字输入，查询时按当前已抓取数据筛选，不触发重新抓取。
+- 已新增最高角色等级解析与本地筛选：从卖家说/标题中的明确 `最高角色等级:50` 字段写入 `maxCharacterLevel`，前端提供仅允许数字的 `等级` 输入并精确匹配。
+- 已修复最高角色等级与连体号数字粘连：解析时保留字段后的空格边界，`最高角色等级:49 4连号` 解析为 49，`最高角色等级:50 5连号` 解析为 50；真实抓取 200 条复核三位异常等级为 0。
 
 ## Verification
 
@@ -44,12 +46,13 @@
 | 完整启动检查 | `bash init.sh` | 所有检查通过 |
 | AI 运行时 | 微信开发者工具 Nightly 最新版 | SKILL 可加载、接口可调用、卡片可展示 |
 | 售卖数据探针 | `node scripts/validate-aion2-data-probe.mjs` | `Aion2 listing data probe validation passed` |
-| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 15 tests passed |
+| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 18 tests passed |
 | 查询网站生产构建 | `cd aion2-market-dashboard && npm run build` | Vite build passed |
 | 查询网站真实抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 81.9 秒返回 100 条、7 个来源页、来源=螃蟹、首条含 `4连号` 子集 |
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
 | 查询网站交互验证 | in-app browser at `http://127.0.0.1:4173/` | 查询/重新抓取双按钮存在；无子集表头；默认 3 条卖家说展开；点击装等排序不重新抓取；发布时间排序夹具验证通过 |
 | 战斗力筛选验证 | `npm test && npm run build` | 战斗力下限输入仅保留数字；构建通过，筛选在前端本地完成 |
+| 等级筛选验证 | `npm test && npm run build` + 本地浏览器 | 18 项测试通过，含 `49 4连号`、`50 5连号` 回归样例；本地 194 条数据查询 50 返回 93 条，浏览器无错误 |
 | 查询网站分页验证 | in-app browser at `http://127.0.0.1:4173/` | 默认种族为全部；每页 10/50/100 切换可用，切换后回到第 1 页且不新增 `/api/listings` 调用 |
 | EdgeOne Function 迁移验证 | `cloud-functions/api/listings.js` + local preview `/api/listings` | 直接调用函数返回 200 条，螃蟹/7881 各 100 条；本地 preview 返回 `Count=200`、`SourceCount=2`、`Warnings=0` |
 | 连体号筛选验证 | `npm test` + Cloud Function fixture/live call | 10 项测试通过；`linkedAccount=4连号` 实测返回 47 条且结果标签均为 `4连号` |
@@ -84,7 +87,9 @@
 - 高风险设备控制必须先确认审批和审计方案。
 - 螃蟹页面 HTML 仍会返回反自动化挑战；当前线上实现改用其公开 JSON 列表接口，不读取 Cookie、不绕过验证码。详情页“卖家说”暂以列表标题作为展开内容，后续若发现稳定详情 API 再补全。
 - 7881 使用公开搜索页同源接口；接口需要 `lb-timestamp` 和 `lb-sign`，签名逻辑来自页面脚本 `lb-cry.js`。
-- 当前重新抓取每个来源的数量由用户分别填写，默认螃蟹 100 条、7881 100 条；默认种族为“全部”以包含天族和魔族；不定时抓取、不保存历史；密集请求可能触发站点临时限流，禁止绕过。查询按钮、战斗力筛选、排序、翻页和每页条数切换只筛选或重排本地已抓取数据。
+- 当前重新抓取每个来源的数量由用户分别填写，默认螃蟹 100 条、7881 100 条；默认种族为“全部”以包含天族和魔族；不定时抓取、不保存历史；密集请求可能触发站点临时限流，禁止绕过。查询按钮、战斗力与等级筛选、排序、翻页和每页条数切换只筛选或重排本地已抓取数据。
+- 根目录缺少 `app.json`、`page-meta.json`、`project.config.json`，微信 AI 校验当前有 4 个既有基线错误；等级筛选模块自身的测试、构建和数据探针校验均通过。
+- 当前 Windows 终端找不到 `bash`，`bash init.sh` 无法执行；需在提供 Bash 的终端重试完整启动检查。
 
 ## Next Session Startup
 

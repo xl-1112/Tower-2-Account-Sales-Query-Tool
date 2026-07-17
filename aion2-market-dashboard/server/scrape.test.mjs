@@ -10,6 +10,7 @@ import {
   parseChildCharacters,
   parseLinkedAccountCount,
   parseListings,
+  parseMaxCharacterLevel,
   parseMembershipDays,
   parseSellerRemark,
   scrapeListings,
@@ -36,6 +37,7 @@ test('parseListings extracts the requested marketplace fields from rendered HTML
       profession: '弓星',
       equipmentLevel: '4514',
       combatPower: '573.32K',
+      maxCharacterLevel: null,
       membershipDays: null,
       children: [],
       linkedAccountCount: null,
@@ -147,6 +149,15 @@ test('parseMembershipDays avoids distant numeric fields and reads explicit membe
   assert.equal(parseMembershipDays('11111111天 梅斯蘭泰蓮 天8'), null)
 })
 
+test('parseMaxCharacterLevel reads only explicit highest-role level fields', () => {
+  assert.equal(parseMaxCharacterLevel('【精灵星 女 最高角色等级:49 4连号 宠物理解度:已满50级】'), 49)
+  assert.equal(parseMaxCharacterLevel('最高角色等级:50 5连号 宠物理解度:已满50级'), 50)
+  assert.equal(parseMaxCharacterLevel('最高角色等级:50，会员还有13天'), 50)
+  assert.equal(parseMaxCharacterLevel('最高角色等級： 55 級'), 55)
+  assert.equal(parseMaxCharacterLevel('最高角色等级:50，最高角色等级-52'), 52)
+  assert.equal(parseMaxCharacterLevel('45级天族弓星，装等4514，战斗力573.32K'), null)
+})
+
 test('enrichListingWithSellerRemark adds seller-derived account details', () => {
   const item = parseListings(`
     <a href="/product/123456/1">
@@ -156,8 +167,9 @@ test('enrichListingWithSellerRemark adds seller-derived account details', () => 
         shelveuptimetext="9分钟前"></span>
     </a>
   `)[0]
-  const enriched = enrichListingWithSellerRemark(item, '会员还有13天，4连号，小号290k')
+  const enriched = enrichListingWithSellerRemark(item, '最高角色等级:50，会员还有13天，4连号，小号290k')
 
+  assert.equal(enriched.maxCharacterLevel, 50)
   assert.equal(enriched.membershipDays, 13)
   assert.equal(enriched.linkedAccountCount, 4)
   assert.equal(enriched.linkedAccountLabel, '4连号')
@@ -175,7 +187,7 @@ test('normalize7881Listing maps 7881 goods fields into the shared table model', 
     serverName: '卡薩卡',
     price: 988,
     lastTime: '2026-06-16 10:00:52',
-    title: '战力评分K:558.3 性别:女 战力值:4413 5连号，558K大号+455K小号应龙弓+3个240K精灵魔道护法',
+    title: '最高角色等级:50 战力评分K:558.3 性别:女 战力值:4413 5连号，558K大号+455K小号应龙弓+3个240K精灵魔道护法',
     subTitle: '账号类型-NC邮箱账号|职业-守护星|战力值-4413|守护力-1185|战力评分K-558.3|连体号-5连号',
   })
 
@@ -187,6 +199,7 @@ test('normalize7881Listing maps 7881 goods fields into the shared table model', 
   assert.equal(item.profession, '守护星')
   assert.equal(item.equipmentLevel, '4413')
   assert.equal(item.combatPower, '558.3K')
+  assert.equal(item.maxCharacterLevel, 50)
   assert.equal(item.linkedAccountCount, 5)
   assert.equal(item.linkedAccountLabel, '5连号')
   assert.equal(item.publishedAtLabel, '2026-06-16 10:00:52')

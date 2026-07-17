@@ -145,6 +145,13 @@ export function parseMembershipDays(text = '') {
   return remainingDays.length ? Math.max(...remainingDays) : null
 }
 
+export function parseMaxCharacterLevel(text = '') {
+  const levels = [...String(text).matchAll(/最高角色\s*(?:等级|等級)\s*[:：-]?\s*(\d{1,3})(?:\s*(?:级|級))?(?!\d)/g)]
+    .map((match) => Number(match[1]))
+    .filter((level) => Number.isInteger(level) && level > 0)
+  return levels.length ? Math.max(...levels) : null
+}
+
 export function parseSellerRemark(text = '') {
   const normalized = decodeHtml(text).replace(/\s+/g, ' ').trim()
   const match = normalized.match(/卖家说[:：]?\s*卖家自主行为，真实数据以最终验号为准\s*(.+?)(?:找回赔付|100%赔付保障|验号报告|商品描述|交流|交易流程|商务合作|$)/)
@@ -214,6 +221,7 @@ export function enrichListingWithSellerRemark(item, sellerRemark = '') {
   const linkedAccountCount = parseLinkedAccountCount(detailText)
   return {
     ...item,
+    maxCharacterLevel: parseMaxCharacterLevel(sellerRemark) ?? item.maxCharacterLevel ?? null,
     membershipDays: parseMembershipDays(detailText),
     children: parseChildCharacters(detailText),
     linkedAccountCount,
@@ -232,6 +240,7 @@ export function normalizeListing(raw) {
   const detailText = joinTextFragments(title, sellerRemark, raw.linkedAccountText)
   const equipmentLevel = title.match(/装等\s*([\d.]+)/)?.[1] || null
   const combatPower = title.match(/战斗力\s*([\d.]+\s*[KkMm]?)/)?.[1]?.replace(/\s+/g, '') || null
+  const maxCharacterLevel = parseMaxCharacterLevel(sellerRemark || title)
   const membershipDays = parseMembershipDays(detailText)
   const children = parseChildCharacters(detailText)
   const linkedAccountCount = parseLinkedAccountCount(detailText)
@@ -248,6 +257,7 @@ export function normalizeListing(raw) {
     profession: metadata[3] || null,
     equipmentLevel,
     combatPower,
+    maxCharacterLevel,
     membershipDays,
     children,
     linkedAccountCount,
@@ -319,6 +329,7 @@ export function normalize7881Listing(raw) {
     profession,
     equipmentLevel,
     combatPower: combatPowerRaw ? `${String(combatPowerRaw).replace(/\s+/g, '')}K` : null,
+    maxCharacterLevel: parseMaxCharacterLevel(title),
     membershipDays: parseMembershipDays(detailText),
     children,
     linkedAccountCount,
