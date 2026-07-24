@@ -42,7 +42,7 @@ test('parseListings extracts the requested marketplace fields from rendered HTML
       membershipDays: null,
       children: [],
       linkedAccountCount: null,
-      linkedAccountLabel: null,
+      linkedAccountLabel: '单号',
       sellerRemark: '【艾瑞爾】45级天族男弓星 装等4514 战斗力573.32K',
       publishedAtLabel: '9分钟前',
       detailUrl: 'https://www.pxb7.com/product/123456/1',
@@ -265,6 +265,19 @@ test('filterListings supports multiple profession, race and linked-account selec
     race: ['天族', '魔族'],
     linkedAccount: '4连号,5连号',
   }), [rows[0], rows[2]])
+})
+
+test('filterListings supports below-four and single linked-account options', () => {
+  const rows = [
+    { productId: 'single', priceYuan: 100, linkedAccountCount: null, linkedAccountLabel: '单号' },
+    { productId: 'double', priceYuan: 100, linkedAccountCount: 2, linkedAccountLabel: '2连号' },
+    { productId: 'triple', priceYuan: 100, linkedAccountCount: 3, linkedAccountLabel: '3连号' },
+    { productId: 'quad', priceYuan: 100, linkedAccountCount: 4, linkedAccountLabel: '4连号' },
+  ]
+
+  assert.deepEqual(filterListings(rows, { linkedAccount: '4连以下' }), rows.slice(0, 3))
+  assert.deepEqual(filterListings(rows, { linkedAccount: '单号' }), [rows[0]])
+  assert.deepEqual(filterListings(rows, { linkedAccount: ['单号', '4连号'] }), [rows[0], rows[3]])
 })
 
 test('normalizeFilters keeps independent user-provided source limits', () => {

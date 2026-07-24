@@ -135,6 +135,14 @@
       "dependencies": ["data-016"],
       "status": "completed",
       "evidence": "前端职业多选与后端PROFESSION_OPTIONS均新增拳星；新增双来源拳星归一化和职业筛选回归测试。验证通过：npm test 21项、npm run build、node scripts/validate-aion2-data-probe.mjs；应用内浏览器确认职业下拉显示拳星，本地查询返回6条拳星，带拳星条件重新抓取返回11条且首屏10条职业列均为拳星，浏览器错误为0。根目录微信AI校验仍受既有app.json/page-meta.json/project.config.json缺失阻塞。"
+    },
+    {
+      "id": "data-018",
+      "name": "永恒之塔2低连号与单号筛选",
+      "description": "连体号查询新增4连以下和单号；4连以下匹配3连号、2连号和单号，单号仅匹配单号；列表中缺少连号信息的“-”统一显示为单号。",
+      "dependencies": ["data-017"],
+      "status": "completed",
+      "evidence": "前后端连体号选项与匹配规则同步扩展；统一数据模型将缺少连号信息的账号标记为单号。验证通过：npm test 22项、npm run build、node scripts/validate-aion2-data-probe.mjs。根目录微信AI校验仍受既有app.json/page-meta.json/project.config.json缺失阻塞。"
     }
   ]
 }

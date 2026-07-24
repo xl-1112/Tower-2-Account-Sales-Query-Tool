@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-07-21
-**Active Feature:** data-017 - 永恒之塔2拳星职业接入（已完成）
+**Last Updated:** 2026-07-24
+**Active Feature:** data-018 - 永恒之塔2低连号与单号筛选（已完成）
 
 ## What's Done
 
@@ -58,6 +58,8 @@
 - [x] 职业查询条件新增“拳星”，默认“全部”也会包含该职业；后端职业白名单同步支持拳星。
 - [x] 螃蟹 `attrNameList` 与 7881 `职业-拳星` 均可归一化为统一 `profession: 拳星`，并通过接口和本地职业筛选后显示在列表职业列。
 - [x] 应用内浏览器真实验证：本地拳星查询返回 6 条；带拳星条件重新抓取返回 11 条，首屏 10 条职业列均显示拳星，浏览器无错误。
+- [x] 连体号下拉新增“4连以下”和“单号”；“4连以下”匹配 3连号、2连号、单号，“单号”只匹配单号。
+- [x] 统一数据模型和列表展示将缺少连号信息的 `-` 改为“单号”，前后端查询规则保持一致。
 
 ## What's Next
 
@@ -92,4 +94,5 @@
 - 等级筛选验证：`npm test` 18 项通过，覆盖 `49 4连号` 与 `50 5连号` 回归样例；真实抓取修复前 50 级 9 条且存在 503～508 异常，修复后 50 级 93 条且三位异常等级 0 条；本地预览在已抓取 194 条中查询 50 显示 93 条且无浏览器错误；`npm run build`、`node scripts/validate-aion2-data-probe.mjs` 通过
 - 长期运行卡死修复验证：`npm test` 20 项通过，新增“挂起旧抓取不阻塞新抓取”和“来源+商品 ID 去重”回归；`npm run build`、`node scripts/validate-aion2-data-probe.mjs` 通过；应用内浏览器真实抓取 193 条并再次刷新，抓取时间成功更新，首屏 10 条详情链接唯一且交互正常，浏览器错误为 0
 - 拳星职业验证：`npm test` 21 项通过，新增螃蟹/7881拳星归一化与职业筛选回归；`npm run build`、`node scripts/validate-aion2-data-probe.mjs` 通过；应用内浏览器职业下拉、本地查询、重新抓取和列表职业列均验证通过
+- 低连号与单号筛选验证：`npm test` 22 项通过，覆盖“4连以下”“单号”及多选组合；`npm run build`、`node scripts/validate-aion2-data-probe.mjs` 通过
 - 设计 QA：`aion2-market-dashboard/design-qa.md`

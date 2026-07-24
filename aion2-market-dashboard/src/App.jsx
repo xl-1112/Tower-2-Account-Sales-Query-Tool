@@ -12,7 +12,7 @@ import {
 
 const professions = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星', '拳星']
 const races = ['天族', '魔族']
-const linkedAccountOptions = ['4连号', '5连号', '6连号', '7连号', '8连号']
+const linkedAccountOptions = ['4连以下', '单号', '4连号', '5连号', '6连号', '7连号', '8连号']
 const pageSizeOptions = [10, 50, 100]
 const refreshTimeoutMs = 60_000
 const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
@@ -121,6 +121,20 @@ function optionLabel(selected, allOptions) {
   return selected.join('、')
 }
 
+function linkedAccountMatches(selected, item) {
+  if (!selected.length) return true
+  const directCount = Number(item.linkedAccountCount)
+  const labelCount = Number(String(item.linkedAccountLabel || '').match(/^(\d+)连号$/)?.[1])
+  const count = Number.isInteger(directCount) && directCount > 1
+    ? directCount
+    : Number.isInteger(labelCount) && labelCount > 1 ? labelCount : 1
+  return selected.some((option) => {
+    if (option === '4连以下') return count <= 3
+    if (option === '单号') return count === 1
+    return item.linkedAccountLabel === option
+  })
+}
+
 function filterRows(rows, activeFilters) {
   const minPrice = Number(activeFilters.minPrice || 0)
   const maxPrice = activeFilters.maxPrice ? Number(activeFilters.maxPrice) : Number.POSITIVE_INFINITY
@@ -138,7 +152,7 @@ function filterRows(rows, activeFilters) {
     const levelMatches = characterLevel <= 0 || item.maxCharacterLevel === characterLevel
     const professionMatches = !selectedProfessions.length || selectedProfessions.includes(item.profession)
     const raceMatches = !selectedRaces.length || selectedRaces.includes(item.race)
-    const linkedMatches = !selectedLinkedAccounts.length || selectedLinkedAccounts.includes(item.linkedAccountLabel)
+    const linkedMatches = linkedAccountMatches(selectedLinkedAccounts, item)
     const memberMatches = minMemberDays <= 0 || (item.membershipDays || 0) >= minMemberDays
     return priceMatches && combatMatches && levelMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })
@@ -631,7 +645,7 @@ export function App() {
                       <td><span className="race-tag">{item.race}</span></td>
                       <td><strong className="price-cell">{formatCurrency(item.priceYuan)}</strong></td>
                       <td>{item.profession || '-'}</td>
-                      <td><span className="linked-tag">{item.linkedAccountLabel || '-'}</span></td>
+                      <td><span className="linked-tag">{item.linkedAccountLabel || '单号'}</span></td>
                       <td>{item.equipmentLevel || '-'}</td>
                       <td><span className="power-value">{item.combatPower || '-'}</span></td>
                       <td><span className="member-value">{item.membershipDays === null ? '-' : `${item.membershipDays}天`}</span></td>

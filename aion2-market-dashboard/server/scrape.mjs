@@ -14,7 +14,17 @@ const SOURCE_7881_SIGN_SEED = '5c2c538a3937c6db2d04bce3d03bbe88bl'.split('').rev
 const ALL_OPTION = '全部'
 const PROFESSION_OPTIONS = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星', '拳星']
 const RACE_OPTIONS = ['天族', '魔族']
-const LINKED_ACCOUNT_OPTIONS = ['4连号', '5连号', '6连号', '7连号', '8连号']
+const LINKED_ACCOUNT_BELOW_FOUR = '4连以下'
+const SINGLE_ACCOUNT_LABEL = '单号'
+const LINKED_ACCOUNT_OPTIONS = [
+  LINKED_ACCOUNT_BELOW_FOUR,
+  SINGLE_ACCOUNT_LABEL,
+  '4连号',
+  '5连号',
+  '6连号',
+  '7连号',
+  '8连号',
+]
 const SOURCE_REQUEST_TIMEOUT_MS = 15_000
 
 function decodeHtml(value = '') {
@@ -44,7 +54,7 @@ function chineseCount(value) {
 }
 
 function linkedAccountLabel(count) {
-  return count ? `${count}连号` : null
+  return count && count > 1 ? `${count}连号` : SINGLE_ACCOUNT_LABEL
 }
 
 function uniqueSmallChildren(children) {
@@ -99,6 +109,23 @@ function normalizeMultiOption(value, options) {
 
 function multiOptionMatches(selectedValues, value) {
   return !selectedValues.length || selectedValues.includes(value)
+}
+
+function listingLinkedAccountCount(item) {
+  const directCount = Number(item.linkedAccountCount)
+  if (Number.isInteger(directCount) && directCount > 1) return directCount
+  const labelCount = Number(String(item.linkedAccountLabel || '').match(/^(\d+)连号$/)?.[1])
+  return Number.isInteger(labelCount) && labelCount > 1 ? labelCount : 1
+}
+
+function linkedAccountMatches(selectedValues, item) {
+  if (!selectedValues.length) return true
+  const count = listingLinkedAccountCount(item)
+  return selectedValues.some((option) => {
+    if (option === LINKED_ACCOUNT_BELOW_FOUR) return count <= 3
+    if (option === SINGLE_ACCOUNT_LABEL) return count === 1
+    return item.linkedAccountLabel === option
+  })
 }
 
 function parseSmallAccountCountHint(text = '') {
@@ -385,7 +412,7 @@ export function filterListings(items, filters = {}) {
     const priceMatches = item.priceYuan >= normalizedFilters.minPrice && item.priceYuan <= normalizedFilters.maxPrice
     const professionMatches = multiOptionMatches(normalizedFilters.profession, item.profession)
     const raceMatches = multiOptionMatches(normalizedFilters.race, item.race)
-    const linkedMatches = multiOptionMatches(normalizedFilters.linkedAccount, item.linkedAccountLabel)
+    const linkedMatches = linkedAccountMatches(normalizedFilters.linkedAccount, item)
     const memberMatches = normalizedFilters.minMemberDays <= 0 || (item.membershipDays || 0) >= normalizedFilters.minMemberDays
     return priceMatches && professionMatches && raceMatches && linkedMatches && memberMatches
   })

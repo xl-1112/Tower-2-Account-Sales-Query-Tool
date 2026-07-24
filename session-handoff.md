@@ -43,6 +43,8 @@
 - 应用内浏览器真实验证刷新前后抓取时间成功变化，首屏 10 条链接唯一，加载期间及完成后展开按钮与详情链接均可用，浏览器错误为 0。
 - 已在前端和后端职业选项中新增拳星；默认全部职业包含拳星，选择拳星可同时用于本地查询和重新抓取。
 - 螃蟹与 7881 的拳星数据均映射为统一 `profession: 拳星` 并显示在列表职业列；应用内浏览器重新抓取返回 11 条拳星，首屏 10 条均正确显示。
+- 已在连体号查询中新增“4连以下”和“单号”；“4连以下”匹配 3连号、2连号、单号，“单号”仅匹配单号。
+- 缺少连号信息的账号统一标记并显示为“单号”，列表连体号列不再显示 `-`。
 
 ## Verification
 
@@ -52,7 +54,7 @@
 | 完整启动检查 | `bash init.sh` | 所有检查通过 |
 | AI 运行时 | 微信开发者工具 Nightly 最新版 | SKILL 可加载、接口可调用、卡片可展示 |
 | 售卖数据探针 | `node scripts/validate-aion2-data-probe.mjs` | `Aion2 listing data probe validation passed` |
-| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 21 tests passed |
+| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 22 tests passed |
 | 查询网站生产构建 | `cd aion2-market-dashboard && npm run build` | Vite build passed |
 | 查询网站真实抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 81.9 秒返回 100 条、7 个来源页、来源=螃蟹、首条含 `4连号` 子集 |
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
@@ -67,6 +69,7 @@
 | 双平台抓取上限验证 | live scrape + Cloud Function call | `pxb7Limit=5&source7881Limit=7` 返回螃蟹 5 条、7881 7 条；Function `pxb7Limit=3&source7881Limit=4` 返回总计 7 条 |
 | 长期运行卡死回归 | `npm test` + in-app browser | 挂起旧抓取不阻塞新抓取；首屏 10 条链接唯一，重新抓取更新时间且列表交互正常，浏览器错误为 0 |
 | 拳星职业验证 | `npm test` + in-app browser | 双来源拳星归一化与筛选通过；下拉可选拳星，重新抓取返回拳星且列表职业列正确显示 |
+| 低连号与单号筛选 | `npm test` + in-app browser | 4连以下匹配3连、2连、单号；单号仅匹配单号；列表空值显示为单号 |
 
 ## Existing User Changes
 
