@@ -37,6 +37,12 @@
 - 已新增战斗力本地筛选：前端提供 `战斗力 ≥` 数字输入，查询时按当前已抓取数据筛选，不触发重新抓取。
 - 已新增最高角色等级解析与本地筛选：从卖家说/标题中的明确 `最高角色等级:50` 字段写入 `maxCharacterLevel`，前端提供仅允许数字的 `等级` 输入并精确匹配。
 - 已修复最高角色等级与连体号数字粘连：解析时保留字段后的空格边界，`最高角色等级:49 4连号` 解析为 49，`最高角色等级:50 5连号` 解析为 50；真实抓取 200 条复核三位异常等级为 0。
+- 已修复页面长期运行后的抓取卡死：纯 HTTP 抓取不再通过遗留全局队列串行等待，挂起的历史请求不会阻塞新的抓取请求。
+- 螃蟹和 7881 单次来源请求均有 15 秒超时；聚合返回按来源和商品 ID 去重，避免首屏重复键复用旧节点。
+- 前端重新抓取有 60 秒超时，会取消上一请求并只接收最新请求响应，旧响应无法覆盖新列表。
+- 应用内浏览器真实验证刷新前后抓取时间成功变化，首屏 10 条链接唯一，加载期间及完成后展开按钮与详情链接均可用，浏览器错误为 0。
+- 已在前端和后端职业选项中新增拳星；默认全部职业包含拳星，选择拳星可同时用于本地查询和重新抓取。
+- 螃蟹与 7881 的拳星数据均映射为统一 `profession: 拳星` 并显示在列表职业列；应用内浏览器重新抓取返回 11 条拳星，首屏 10 条均正确显示。
 
 ## Verification
 
@@ -46,7 +52,7 @@
 | 完整启动检查 | `bash init.sh` | 所有检查通过 |
 | AI 运行时 | 微信开发者工具 Nightly 最新版 | SKILL 可加载、接口可调用、卡片可展示 |
 | 售卖数据探针 | `node scripts/validate-aion2-data-probe.mjs` | `Aion2 listing data probe validation passed` |
-| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 18 tests passed |
+| 查询网站解析测试 | `cd aion2-market-dashboard && npm test` | 21 tests passed |
 | 查询网站生产构建 | `cd aion2-market-dashboard && npm run build` | Vite build passed |
 | 查询网站真实抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 81.9 秒返回 100 条、7 个来源页、来源=螃蟹、首条含 `4连号` 子集 |
 | 查询网站双来源抓取 | `GET /api/listings?minPrice=500&race=天族&profession=弓星` | 85.9 秒返回 200 条、螃蟹 100 条、7881 100 条、总源页 11 页 |
@@ -59,6 +65,8 @@
 | 会员天数修正验证 | live scrape anomaly scan | 真实抓取 200 条后 `membershipDays > 10000` 异常为 0 条 |
 | 螃蟹连体号修正验证 | Cloud Function live call | `linkedAccount=4连号` 返回 84 条，其中螃蟹 39 条且结果标签均为 `4连号` |
 | 双平台抓取上限验证 | live scrape + Cloud Function call | `pxb7Limit=5&source7881Limit=7` 返回螃蟹 5 条、7881 7 条；Function `pxb7Limit=3&source7881Limit=4` 返回总计 7 条 |
+| 长期运行卡死回归 | `npm test` + in-app browser | 挂起旧抓取不阻塞新抓取；首屏 10 条链接唯一，重新抓取更新时间且列表交互正常，浏览器错误为 0 |
+| 拳星职业验证 | `npm test` + in-app browser | 双来源拳星归一化与筛选通过；下拉可选拳星，重新抓取返回拳星且列表职业列正确显示 |
 
 ## Existing User Changes
 

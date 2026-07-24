@@ -119,6 +119,22 @@
       "dependencies": ["data-014"],
       "status": "completed",
       "evidence": "新增 parseMaxCharacterLevel，覆盖繁简体、常见分隔符和非明确等级文本；修复空格被移除后把“最高角色等级:49 4连号”误解析为 494、把 50 级连号误解析为 503～508 的问题。前端新增“等级”数字输入并按 maxCharacterLevel 精确匹配。验证通过：npm test 18项、npm run build、node scripts/validate-aion2-data-probe.mjs；真实抓取 200 条后 50 级从错误的 9 条恢复为 93 条，三位异常等级为 0。根目录微信 AI 校验仍受既有 app.json/page-meta.json/project.config.json 缺失阻塞。"
+    },
+    {
+      "id": "data-016",
+      "name": "永恒之塔2长期运行抓取卡死修复",
+      "description": "修复页面长期运行后重新抓取被历史挂起请求阻塞、首屏旧 10 条持续残留且交互失效的问题；新的抓取请求应独立执行，来源超时后可恢复，并避免旧响应覆盖新结果。",
+      "dependencies": ["data-015"],
+      "status": "completed",
+      "evidence": "移除纯 HTTP 抓取层遗留的全局串行队列，为螃蟹/7881来源请求增加15秒超时并对聚合结果按来源+商品ID去重；前端增加60秒超时、取消旧请求和仅最新响应写入保护。验证通过：npm test 20项（含挂起旧抓取不阻塞新抓取、重复行去重回归）、npm run build、node scripts/validate-aion2-data-probe.mjs；应用内浏览器真实抓取193条后重新抓取，时间由09:42:21更新到09:43:26，首屏10条详情链接全部唯一且展开/详情控件可用，浏览器错误为0。根目录微信AI校验仍受既有app.json/page-meta.json/project.config.json缺失阻塞。"
+    },
+    {
+      "id": "data-017",
+      "name": "永恒之塔2拳星职业接入",
+      "description": "在职业查询条件中新增拳星，并让螃蟹与7881来源返回的拳星账号通过后端筛选后在列表职业列正常展示。",
+      "dependencies": ["data-016"],
+      "status": "completed",
+      "evidence": "前端职业多选与后端PROFESSION_OPTIONS均新增拳星；新增双来源拳星归一化和职业筛选回归测试。验证通过：npm test 21项、npm run build、node scripts/validate-aion2-data-probe.mjs；应用内浏览器确认职业下拉显示拳星，本地查询返回6条拳星，带拳星条件重新抓取返回11条且首屏10条职业列均为拳星，浏览器错误为0。根目录微信AI校验仍受既有app.json/page-meta.json/project.config.json缺失阻塞。"
     }
   ]
 }

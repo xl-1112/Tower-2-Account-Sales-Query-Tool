@@ -12,11 +12,10 @@ const PXB7_SOURCE_NAME = '螃蟹'
 const SOURCE_7881_NAME = '7881'
 const SOURCE_7881_SIGN_SEED = '5c2c538a3937c6db2d04bce3d03bbe88bl'.split('').reverse().join('')
 const ALL_OPTION = '全部'
-const PROFESSION_OPTIONS = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
+const PROFESSION_OPTIONS = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星', '拳星']
 const RACE_OPTIONS = ['天族', '魔族']
 const LINKED_ACCOUNT_OPTIONS = ['4连号', '5连号', '6连号', '7连号', '8连号']
-
-let scrapeQueue = Promise.resolve()
+const SOURCE_REQUEST_TIMEOUT_MS = 15_000
 
 function decodeHtml(value = '') {
   return String(value)
@@ -392,10 +391,34 @@ export function filterListings(items, filters = {}) {
   })
 }
 
-export async function scrapeListings(filters = {}) {
-  const task = scrapeQueue.then(() => runScrape(filters))
-  scrapeQueue = task.catch(() => undefined)
-  return task
+export function dedupeListings(items = []) {
+  const seen = new Set()
+  return items.filter((item) => {
+    const key = `${item.source || ''}:${item.productId || ''}`
+    if (!item.productId || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+export async function scrapeListings(filters = {}, options = {}) {
+  return runScrape(filters, options.requestTimeoutMs || SOURCE_REQUEST_TIMEOUT_MS)
+}
+
+async function fetchWithTimeout(url, options, sourceName, timeoutMs) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`${sourceName}接口请求超时，请稍后重试`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 function pxb7Headers() {
@@ -414,7 +437,7 @@ function pxb7Headers() {
   }
 }
 
-async function fetchPxb7Page(pageIndex, headers) {
+async function fetchPxb7Page(pageIndex, headers, requestTimeoutMs) {
   const body = {
     query: '',
     gameId: PXB7_GAME_ID,
@@ -427,11 +450,11 @@ async function fetchPxb7Page(pageIndex, headers) {
     combineFilterList: [],
   }
 
-  const response = await fetch(PXB7_API_URL, {
+  const response = await fetchWithTimeout(PXB7_API_URL, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-  })
+  }, PXB7_SOURCE_NAME, requestTimeoutMs)
 
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.includes('application/json')) {
@@ -444,7 +467,7 @@ async function fetchPxb7Page(pageIndex, headers) {
   return data.data || { list: [] }
 }
 
-async function scrapePxb7Listings(limit = DEFAULT_ITEMS_PER_SOURCE) {
+async function scrapePxb7Listings(limit = DEFAULT_ITEMS_PER_SOURCE, requestTimeoutMs = SOURCE_REQUEST_TIMEOUT_MS) {
   const items = []
   const seen = new Set()
   const headers = pxb7Headers()
@@ -452,7 +475,7 @@ async function scrapePxb7Listings(limit = DEFAULT_ITEMS_PER_SOURCE) {
   const maxPages = Math.ceil(limit / PXB7_SOURCE_PAGE_SIZE)
 
   for (let pageIndex = 1; pageIndex <= maxPages && items.length < limit; pageIndex += 1) {
-    const pageData = await fetchPxb7Page(pageIndex, headers)
+    const pageData = await fetchPxb7Page(pageIndex, headers, requestTimeoutMs)
     pagesFetched += 1
     const list = pageData.list || []
 
@@ -477,7 +500,7 @@ async function scrapePxb7Listings(limit = DEFAULT_ITEMS_PER_SOURCE) {
   }
 }
 
-async function fetch7881Page(filters, pageNum) {
+async function fetch7881Page(filters, pageNum, requestTimeoutMs) {
   const body = {
     marketRequestSource: 'search',
     sellerType: 'C',
@@ -506,7 +529,7 @@ async function fetch7881Page(filters, pageNum) {
   const payload = JSON.stringify(body)
   const timestamp = Date.now()
   const sign = md5(md5(`${SOURCE_7881_SIGN_SEED}${timestamp}`) + payload)
-  const response = await fetch(GOODS_7881_API_URL, {
+  const response = await fetchWithTimeout(GOODS_7881_API_URL, {
     method: 'POST',
     headers: {
       accept: 'application/json, text/javascript, */*; q=0.01',
@@ -517,7 +540,7 @@ async function fetch7881Page(filters, pageNum) {
       'lb-sign': sign,
     },
     body: payload,
-  })
+  }, SOURCE_7881_NAME, requestTimeoutMs)
   const contentType = response.headers.get('content-type') || ''
   const text = await response.text()
   if (!contentType.includes('application/json')) {
@@ -535,19 +558,22 @@ async function fetch7881Page(filters, pageNum) {
   return data.body || { results: [], pages: 0 }
 }
 
-async function scrape7881Listings(filters, limit = DEFAULT_ITEMS_PER_SOURCE) {
+async function scrape7881Listings(filters, limit = DEFAULT_ITEMS_PER_SOURCE, requestTimeoutMs = SOURCE_REQUEST_TIMEOUT_MS) {
   const items = []
+  const seen = new Set()
   let pagesFetched = 0
   let totalPages = 1
 
   for (let pageNum = 1; pageNum <= totalPages && items.length < limit; pageNum += 1) {
-    const pageData = await fetch7881Page(filters, pageNum)
+    const pageData = await fetch7881Page(filters, pageNum, requestTimeoutMs)
     pagesFetched += 1
     totalPages = Math.min(pageData.pages || 1, Math.ceil(limit / SOURCE_7881_PAGE_SIZE))
 
     for (const raw of pageData.results || []) {
       const item = normalize7881Listing(raw)
-      if (item) items.push(item)
+      if (!item || seen.has(item.productId)) continue
+      seen.add(item.productId)
+      items.push(item)
       if (items.length >= limit) break
     }
   }
@@ -562,24 +588,24 @@ async function scrape7881Listings(filters, limit = DEFAULT_ITEMS_PER_SOURCE) {
   }
 }
 
-async function runScrape(filters = {}) {
+async function runScrape(filters = {}, requestTimeoutMs = SOURCE_REQUEST_TIMEOUT_MS) {
   const normalizedFilters = normalizeFilters(filters)
   const sourceResults = []
   const warnings = []
 
-  const pxb7Result = await scrapePxb7Listings(normalizedFilters.pxb7Limit).catch((error) => {
+  const pxb7Result = await scrapePxb7Listings(normalizedFilters.pxb7Limit, requestTimeoutMs).catch((error) => {
     warnings.push({ source: PXB7_SOURCE_NAME, message: error.message || '螃蟹抓取失败' })
     return null
   })
   if (pxb7Result) sourceResults.push(pxb7Result)
 
-  const source7881Result = await scrape7881Listings(normalizedFilters, normalizedFilters.source7881Limit).catch((error) => {
+  const source7881Result = await scrape7881Listings(normalizedFilters, normalizedFilters.source7881Limit, requestTimeoutMs).catch((error) => {
     warnings.push({ source: SOURCE_7881_NAME, message: error.message || '7881 抓取失败' })
     return null
   })
   if (source7881Result) sourceResults.push(source7881Result)
 
-  const fetchedItems = sourceResults.flatMap((result) => result.items)
+  const fetchedItems = dedupeListings(sourceResults.flatMap((result) => result.items))
   const items = filterListings(fetchedItems, normalizedFilters)
 
   if (!sourceResults.length) {

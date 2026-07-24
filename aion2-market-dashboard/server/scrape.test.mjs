@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  dedupeListings,
   enrichListingWithSellerRemark,
   filterListings,
   normalize7881Listing,
@@ -213,6 +214,29 @@ test('normalize7881Listing maps 7881 goods fields into the shared table model', 
   ])
 })
 
+test('拳星 listings survive source normalization and profession filtering', () => {
+  const pxb7Item = normalizePxb7ApiListing({
+    productId: '拳星-pxb7',
+    price: 88800,
+    showTitle: '【普雷奇翁】50级天族女拳星，装等4700，战斗力520.8K',
+    attrNameList: ['天族', '普雷奇翁', 'NC邮箱账号', '拳星', '女'],
+    shelveUpTimeText: '刚刚',
+  })
+  const source7881Item = normalize7881Listing({
+    goodsId: '拳星-7881',
+    groupName: '魔族（台服）',
+    serverName: '吉凱爾 魔2',
+    price: 999,
+    lastTime: '2026-07-21 10:00:00',
+    title: '最高角色等级:50 战力评分K:530.1 拳星账号',
+    subTitle: '账号类型-NC邮箱账号|职业-拳星|战力评分K-530.1',
+  })
+
+  assert.equal(pxb7Item.profession, '拳星')
+  assert.equal(source7881Item.profession, '拳星')
+  assert.deepEqual(filterListings([pxb7Item, source7881Item], { profession: '拳星' }), [pxb7Item, source7881Item])
+})
+
 test('filterListings applies local price, race, profession, membership, and linked-account filters', () => {
   const rows = [
     { priceYuan: 600, race: '天族', profession: '弓星', membershipDays: 10, linkedAccountLabel: '4连号' },
@@ -259,6 +283,79 @@ test('normalizeFilters keeps independent user-provided source limits', () => {
     pxb7Limit: 100,
     source7881Limit: 100,
   })
+})
+
+test('dedupeListings keeps one stable row per source and product id', () => {
+  const rows = [
+    { source: '7881', productId: '7881-1', title: 'old' },
+    { source: '7881', productId: '7881-1', title: 'duplicate' },
+    { source: '螃蟹', productId: '7881-1', title: 'other source' },
+  ]
+
+  assert.deepEqual(dedupeListings(rows), [rows[0], rows[2]])
+})
+
+test('a stalled scrape does not block a newer scrape', async () => {
+  const originalFetch = globalThis.fetch
+  let pxb7Calls = 0
+  let firstFinished = false
+
+  globalThis.fetch = async (url, options = {}) => {
+    const requestUrl = String(url)
+    if (requestUrl.includes('api-pc.pxb7.com')) {
+      pxb7Calls += 1
+      if (pxb7Calls === 1) {
+        return new Promise((resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            const error = new Error('aborted')
+            error.name = 'AbortError'
+            reject(error)
+          }, { once: true })
+        })
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          list: [{
+            productId: 'fresh-row',
+            price: 33000,
+            showTitle: '【希塔尼耶】45级天族女护法星，装等3715，战斗力346.59K',
+            attrNameList: ['天族', '希塔尼耶', 'NC邮箱账号', '护法星', '女'],
+            shelveUpTimeText: '刚刚',
+          }],
+        },
+      }), { headers: { 'content-type': 'application/json' } })
+    }
+
+    if (requestUrl.includes('gw.7881.com')) {
+      return new Response(JSON.stringify({ code: 0, body: { results: [], pages: 1 } }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
+    throw new Error(`Unexpected fetch URL: ${requestUrl}`)
+  }
+
+  try {
+    const first = scrapeListings(
+      { pxb7Limit: '1', source7881Limit: '1' },
+      { requestTimeoutMs: 40 },
+    ).finally(() => { firstFinished = true })
+
+    const second = await scrapeListings(
+      { pxb7Limit: '1', source7881Limit: '1' },
+      { requestTimeoutMs: 100 },
+    )
+
+    assert.equal(firstFinished, false)
+    assert.equal(second.items[0].productId, 'fresh-row')
+
+    const recoveredFirst = await first
+    assert.match(recoveredFirst.warnings[0].message, /请求超时/)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test('scrapeListings reports readable 7881 HTML responses and keeps other sources', async () => {

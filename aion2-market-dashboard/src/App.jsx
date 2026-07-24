@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowClockwise,
   ArrowSquareOut,
@@ -10,10 +10,11 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 
-const professions = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星']
+const professions = ['剑星', '守护星', '杀星', '弓星', '护法星', '精灵星', '治愈星', '魔道星', '拳星']
 const races = ['天族', '魔族']
 const linkedAccountOptions = ['4连号', '5连号', '6连号', '7连号', '8连号']
 const pageSizeOptions = [10, 50, 100]
+const refreshTimeoutMs = 60_000
 const gameIcon = 'https://public-image.pxb7.com/pxb7-upload/game/image/20250929/1759125349054_rjtqzmqm8ul.jpg'
 
 const defaultSort = { key: 'price', direction: 'asc' }
@@ -231,6 +232,8 @@ export function App() {
   const [pageSize, setPageSize] = useState(pageSizeOptions[0])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const refreshControllerRef = useRef(null)
+  const refreshRequestIdRef = useRef(0)
 
   const applyLocalFilters = useCallback((nextFilters, sourceItems = allItems, nextSort = sortConfig) => {
     const filteredItems = filterRows(sourceItems, nextFilters)
@@ -241,6 +244,13 @@ export function App() {
   }, [allItems, sortConfig])
 
   const refresh = useCallback(async (nextFilters) => {
+    refreshControllerRef.current?.abort()
+    const controller = new AbortController()
+    const requestId = refreshRequestIdRef.current + 1
+    refreshControllerRef.current = controller
+    refreshRequestIdRef.current = requestId
+    const timeoutId = setTimeout(() => controller.abort(), refreshTimeoutMs)
+
     setLoading(true)
     setError('')
 
@@ -256,9 +266,10 @@ export function App() {
       params.set('pxb7Limit', nextFilters.pxb7Limit || String(defaultPlatformLimit.螃蟹))
       params.set('source7881Limit', nextFilters.source7881Limit || String(defaultPlatformLimit['7881']))
 
-      const response = await fetch(`/api/listings?${params}`)
+      const response = await fetch(`/api/listings?${params}`, { signal: controller.signal })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.message || '重新抓取失败')
+      if (requestId !== refreshRequestIdRef.current) return
 
       const nextItems = payload.items || []
       const filteredItems = filterRows(nextItems, nextFilters)
@@ -274,14 +285,23 @@ export function App() {
       setCurrentPage(1)
       setExpandedRows(defaultExpandedRows(filteredItems, defaultSort))
     } catch (caughtError) {
-      setError(caughtError.message)
+      if (requestId !== refreshRequestIdRef.current) return
+      setError(controller.signal.aborted ? '重新抓取超时，请稍后重试' : caughtError.message)
     } finally {
-      setLoading(false)
+      clearTimeout(timeoutId)
+      if (requestId === refreshRequestIdRef.current) {
+        refreshControllerRef.current = null
+        setLoading(false)
+      }
     }
   }, [])
 
   useEffect(() => {
     refresh(defaultFilters)
+    return () => {
+      refreshRequestIdRef.current += 1
+      refreshControllerRef.current?.abort()
+    }
   }, [defaultFilters, refresh])
 
   const sortedItems = useMemo(() => sortRows(items, sortConfig), [items, sortConfig])
